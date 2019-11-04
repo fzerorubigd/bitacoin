@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/fzerorubigd/bitacoin"
 )
 
 func main() {
@@ -11,7 +13,7 @@ func main() {
 	defer func() {
 		fmt.Println(time.Since(start))
 	}()
-	bc := NewBlockChain(4)
+	bc := bitacoin.NewBlockChain(4)
 	bc.Add("Hello")
 	bc.Add("Another")
 

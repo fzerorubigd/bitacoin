@@ -1,4 +1,4 @@
-package main
+package bitacoin
 
 import (
 	"bytes"
@@ -74,7 +74,7 @@ func (bc *BlockChain) Add(data string) {
 }
 
 func (bc *BlockChain) String() string {
-	var ret = fmt.Sprintf("Difficulty : %d", bc.Difficulty)
+	var ret = fmt.Sprintf("Difficulty : %d\n\n", bc.Difficulty)
 	for i := range bc.Blocks {
 		ret += bc.Blocks[i].String()
 	}
