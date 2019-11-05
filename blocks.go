@@ -75,6 +75,7 @@ func (bc *BlockChain) Add(data string) (*Block, error) {
 	return b, nil
 }
 
+// Print the current blockchain in Stdout, it's useful for debugging
 func (bc *BlockChain) Print() error {
 	fmt.Printf("Difficulty : %d\nStore Backend: %T\n", bc.Difficulty, bc.store)
 

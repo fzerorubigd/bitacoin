@@ -90,6 +90,9 @@ func writeJSON(path string, v interface{}) error {
 	return nil
 }
 
+// NewFolderStore create a file based storage for storing the blocks in the
+// files, each block is in one file, and also there is a config file, for
+// keep track of the last hash in the block
 func NewFolderStore(root string) Store {
 	fs := &folderStore{
 		root:       root,
