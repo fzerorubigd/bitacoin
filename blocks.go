@@ -2,6 +2,7 @@ package bitacoin
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -56,60 +57,67 @@ func NewBlock(data string, mask, prevHash []byte) *Block {
 type BlockChain struct {
 	Difficulty int
 	Mask       []byte
-	Blocks     []*Block
+
+	store Store
 }
 
 // Add a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) Add(data string) {
-	ln := len(bc.Blocks)
-
-	if ln == 0 {
-		panic("why?")
+func (bc *BlockChain) Add(data string) (*Block, error) {
+	hash, err := bc.store.LastHash()
+	if err != nil {
+		return nil, err
+	}
+	b := NewBlock(data, bc.Mask, hash)
+	if err := bc.store.Append(b); err != nil {
+		return nil, err
 	}
 
-	bc.Blocks = append(
-		bc.Blocks,
-		NewBlock(data, bc.Mask, bc.Blocks[ln-1].Hash),
-	)
+	return b, nil
 }
 
-func (bc *BlockChain) String() string {
-	var ret = fmt.Sprintf("Difficulty : %d\n\n", bc.Difficulty)
-	for i := range bc.Blocks {
-		ret += bc.Blocks[i].String()
-	}
+func (bc *BlockChain) Print() error {
+	fmt.Printf("Difficulty : %d\nStore Backend: %T\n", bc.Difficulty, bc.store)
 
-	return ret
+	return Iterate(bc.store, func(b *Block) error {
+		fmt.Print(b)
+		return nil
+	})
 }
 
 // Validate all data in the block chain
 func (bc *BlockChain) Validate() error {
-	for i := range bc.Blocks {
-		if err := bc.Blocks[i].Validate(bc.Mask); err != nil {
+	return Iterate(bc.store, func(b *Block) error {
+		if err := b.Validate(bc.Mask); err != nil {
 			return fmt.Errorf("block chain is not valid: %w", err)
 		}
 
-		if i == 0 {
-			continue
-		}
-
-		if !bytes.Equal(bc.Blocks[i].PrevHash, bc.Blocks[i-1].Hash) {
-			return fmt.Errorf("the order is invalid, it is %x should be %x", bc.Blocks[i].PrevHash, bc.Blocks[i-1].Hash)
-		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
 // block chain is the number of zeros in the begining of the generated hash
-func NewBlockChain(difficulty int) *BlockChain {
+func NewBlockChain(difficulty int, store Store) (*BlockChain, error) {
 	mask := GenerateMask(difficulty)
 	bc := BlockChain{
 		Difficulty: difficulty,
 		Mask:       mask,
+		store:      store,
 	}
-	bc.Blocks = []*Block{NewBlock("Genesis Block", bc.Mask, []byte{})}
 
-	return &bc
+	_, err := store.LastHash()
+	if err == nil {
+		return &bc, nil
+	}
+
+	if !errors.Is(err, ErrNotInitialized) {
+		return nil, fmt.Errorf("getting the last hash failed: %w", err)
+	}
+
+	gb := NewBlock("Genesis Block", bc.Mask, []byte{})
+	if err := store.Append(gb); err != nil {
+		return nil, err
+	}
+
+	return &bc, nil
 }
