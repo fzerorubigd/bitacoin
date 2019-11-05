@@ -1,10 +1,11 @@
-package main
+package bitacoin
 
 import (
 	"crypto/sha256"
 	"fmt"
 )
 
+// GenerateMask creates a mask based on the number of zeros required in the hash
 func GenerateMask(zeros int) []byte {
 	full, half := zeros/2, zeros%2
 	var mask []byte
@@ -19,6 +20,7 @@ func GenerateMask(zeros int) []byte {
 	return mask
 }
 
+// GoodEnough checks if the hash is good for the current mask
 func GoodEnough(mask []byte, hash []byte) bool {
 	for i := range mask {
 		if hash[i] > mask[i] {
@@ -28,6 +30,7 @@ func GoodEnough(mask []byte, hash []byte) bool {
 	return true
 }
 
+// EasyHash craete hash, the easy way, just a simple sha256 hash
 func EasyHash(data ...interface{}) []byte {
 	hasher := sha256.New()
 
@@ -36,6 +39,8 @@ func EasyHash(data ...interface{}) []byte {
 	return hasher.Sum(nil)
 }
 
+// DifficultHash creates the hash with difficulty mask and conditions,
+// return the hash and the nonce used to create the hash
 func DifficultHash(mask []byte, data ...interface{}) ([]byte, int32) {
 	ln := len(data)
 	data = append(data, nil)
