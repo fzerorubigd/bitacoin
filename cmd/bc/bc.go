@@ -13,7 +13,10 @@ func main() {
 	defer func() {
 		fmt.Println(time.Since(start))
 	}()
-	bc := bitacoin.NewBlockChain(4)
+	bc, err := bitacoin.NewBlockChain(4, bitacoin.NewFolderStore("/home/f0rud/bitac"))
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 	bc.Add("Hello")
 	bc.Add("Another")
 
@@ -21,5 +24,5 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	fmt.Println(bc)
+	bc.Print()
 }
