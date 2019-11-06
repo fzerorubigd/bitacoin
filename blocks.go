@@ -34,7 +34,7 @@ func (b *Block) Validate(mask []byte) error {
 	}
 
 	if !GoodEnough(mask, h) {
-		return fmt.Errorf("hash is not good enough with mast %x", mask)
+		return fmt.Errorf("hash is not good enough with mask %x", mask)
 	}
 
 	return nil
