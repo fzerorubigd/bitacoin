@@ -1,6 +1,9 @@
 package bitacoin
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	// ErrNotInitialized should be returned when the store
@@ -28,13 +31,13 @@ type Store interface {
 func Iterate(store Store, fn func(b *Block) error) error {
 	last, err := store.LastHash()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load the latest block hash: %w", err)
 	}
 
 	for {
 		b, err := store.Load(last)
 		if err != nil {
-			return err
+			return fmt.Errorf("load the block failed: %w", err)
 		}
 
 		if err := fn(b); err != nil {

@@ -26,7 +26,7 @@ func (ms *mapStore) Append(b *Block) error {
 
 	x := fmt.Sprintf("%x", b.Hash)
 	if _, ok := ms.data[x]; ok {
-		return fmt.Errorf("duplicate")
+		return fmt.Errorf("duplicate block")
 	}
 
 	ms.data[x] = b
