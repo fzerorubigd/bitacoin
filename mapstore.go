@@ -26,7 +26,7 @@ func (ms *mapStore) Append(b *Block) error {
 
 	x := fmt.Sprintf("%x", b.Hash)
 	if _, ok := ms.data[x]; ok {
-		return fmt.Errorf("duplicate")
+		return fmt.Errorf("duplicate block")
 	}
 
 	ms.data[x] = b
@@ -42,6 +42,8 @@ func (ms *mapStore) LastHash() ([]byte, error) {
 	return ms.last, nil
 }
 
+// NewMapStore is used to create an in memory and not persistant storage, useful
+// for tests
 func NewMapStore() Store {
 	return &mapStore{
 		data: make(map[string]*Block),
