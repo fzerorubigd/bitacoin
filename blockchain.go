@@ -28,13 +28,29 @@ func (bc *BlockChain) Add(data string) (*Block, error) {
 }
 
 // Print the current blockchain in Stdout, it's
-func (bc *BlockChain) Print() error {
+func (bc *BlockChain) Print(header bool, count int) error {
 	fmt.Printf("Difficulty : %d\nStore Backend: %T\n", bc.Difficulty, bc.store)
-
-	return Iterate(bc.store, func(b *Block) error {
+	if header {
+		return nil
+	}
+	var errEnough = fmt.Errorf("enough")
+	err := Iterate(bc.store, func(b *Block) error {
+		if count > 0 {
+			count--
+		}
 		fmt.Print(b)
+
+		if count == 0 {
+			return errEnough
+		}
 		return nil
 	})
+
+	if errors.Is(err, errEnough) {
+		return nil
+	}
+
+	return err
 }
 
 // Validate all data in the block chain
@@ -50,7 +66,7 @@ func (bc *BlockChain) Validate() error {
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
 // block chain is the number of zeros in the begining of the generated hash
-func NewBlockChain(difficulty int, store Store) (*BlockChain, error) {
+func NewBlockChain(genesis string, difficulty int, store Store) (*BlockChain, error) {
 	mask := GenerateMask(difficulty)
 	bc := BlockChain{
 		Difficulty: difficulty,
@@ -59,17 +75,29 @@ func NewBlockChain(difficulty int, store Store) (*BlockChain, error) {
 	}
 
 	_, err := store.LastHash()
-	if err == nil {
-		return &bc, nil
-	}
-
 	if !errors.Is(err, ErrNotInitialized) {
-		return nil, fmt.Errorf("getting the last hash failed: %w", err)
+		return nil, fmt.Errorf("store already initialized")
 	}
 
-	gb := NewBlock("Genesis Block", bc.Mask, []byte{})
+	gb := NewBlock(genesis, bc.Mask, []byte{})
 	if err := store.Append(gb); err != nil {
 		return nil, fmt.Errorf("Add Genesis block to store failed: %w", err)
+	}
+
+	return &bc, nil
+}
+
+func OpenBlockChain(difficulty int, store Store) (*BlockChain, error) {
+	mask := GenerateMask(difficulty)
+	bc := BlockChain{
+		Difficulty: difficulty,
+		Mask:       mask,
+		store:      store,
+	}
+
+	_, err := store.LastHash()
+	if err != nil {
+		return nil, fmt.Errorf("openning the store failed: %w", err)
 	}
 
 	return &bc, nil

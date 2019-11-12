@@ -1,28 +1,26 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
-	"time"
+	"os"
 
 	"github.com/fzerorubigd/bitacoin"
 )
 
+const (
+	difficulty = 2
+)
+
 func main() {
-	start := time.Now()
-	defer func() {
-		fmt.Println(time.Since(start))
-	}()
-	bc, err := bitacoin.NewBlockChain(4, bitacoin.NewFolderStore("/home/f0rud/bitac"))
-	if err != nil {
+	var store string
+	flag.StringVar(&store, "store", os.Getenv("BC_STORE"), "The store to use")
+	flag.Usage = usage
+	flag.Parse()
+
+	s := bitacoin.NewFolderStore(store)
+
+	if err := dispatch(s, flag.Args()...); err != nil {
 		log.Fatal(err.Error())
 	}
-	bc.Add("Hello")
-	bc.Add("Another")
-
-	if err := bc.Validate(); err != nil {
-		log.Fatalf(err.Error())
-	}
-
-	bc.Print()
 }
