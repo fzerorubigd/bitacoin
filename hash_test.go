@@ -40,6 +40,19 @@ func TestGenerateMask(t *testing.T) {
 	}
 }
 
+func TestDifficultHash(t *testing.T) {
+	mask := GenerateMask(2)
+	hash, nonce := DifficultHash(mask, "a", "b", []byte("abc"))
+	if !GoodEnough(mask, hash) {
+		t.Errorf("Hash is not compatibe with mask")
+	}
+
+	easy := EasyHash("a", "b", []byte("abc"), nonce)
+	if !bytes.Equal(easy, hash) {
+		t.Error("Hash is not valid")
+	}
+}
+
 func ExampleGenerateMask() {
 	mask := GenerateMask(3)
 	fmt.Printf("%x", mask)
