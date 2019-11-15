@@ -87,6 +87,8 @@ func NewBlockChain(genesis string, difficulty int, store Store) (*BlockChain, er
 	return &bc, nil
 }
 
+// OpenBlockChain tries to open a blockchain, it returns an error if the blockchain store
+// is empty
 func OpenBlockChain(difficulty int, store Store) (*BlockChain, error) {
 	mask := GenerateMask(difficulty)
 	bc := BlockChain{
