@@ -12,11 +12,11 @@ func initialize(store bitacoin.Store, args ...string) error {
 	var (
 		genesis string
 	)
-	fs.StringVar(&genesis, "genesis", "Genesis block", "Genesis data to use")
+	fs.StringVar(&genesis, "owner", "bita", "Genesis block owner")
 
 	fs.Parse(args[1:])
 
-	_, err := bitacoin.NewBlockChain(genesis, difficulty, store)
+	_, err := bitacoin.NewBlockChain([]byte(genesis), difficulty, store)
 	if err != nil {
 		return fmt.Errorf("create failed: %w", err)
 	}
