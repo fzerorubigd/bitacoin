@@ -1,12 +1,13 @@
 package bitacoin
 
 import (
+	"encoding/hex"
 	"strings"
 	"testing"
 )
 
 func TestBlockCreation(t *testing.T) {
-	const data = "Block Data"
+	data := []*Transaction{NewCoinBaseTxn([]byte("bita"), nil)}
 	mask := GenerateMask(2)
 	prev := EasyHash("Prev hash")
 
@@ -16,8 +17,8 @@ func TestBlockCreation(t *testing.T) {
 		return
 	}
 
-	if !strings.Contains(b.String(), data) {
-		t.Errorf("The data is not in string")
+	if !strings.Contains(b.String(), hex.EncodeToString(prev)) {
+		t.Errorf("The prev hash is not in string")
 	}
 
 	mask2 := GenerateMask(8)
@@ -32,11 +33,11 @@ func TestBlockCreation(t *testing.T) {
 	}
 	b.Nonce--
 
-	b.Data = []byte("Something else")
+	b.Transactions = []*Transaction{NewCoinBaseTxn([]byte("forud"), nil)}
 	if err := b.Validate(mask); err == nil {
 		t.Errorf("Block should be invalid, but is not")
 	}
-	b.Data = []byte(data)
+	b.Transactions = data
 
 	b.PrevHash = EasyHash("Something else")
 	if err := b.Validate(mask); err == nil {

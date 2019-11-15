@@ -14,7 +14,7 @@ type BlockChain struct {
 }
 
 // Add a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) Add(data string) (*Block, error) {
+func (bc *BlockChain) Add(data []*Transaction) (*Block, error) {
 	hash, err := bc.store.LastHash()
 	if err != nil {
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
@@ -66,7 +66,7 @@ func (bc *BlockChain) Validate() error {
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
 // block chain is the number of zeros in the begining of the generated hash
-func NewBlockChain(genesis string, difficulty int, store Store) (*BlockChain, error) {
+func NewBlockChain(genesis []byte, difficulty int, store Store) (*BlockChain, error) {
 	mask := GenerateMask(difficulty)
 	bc := BlockChain{
 		Difficulty: difficulty,
@@ -78,8 +78,8 @@ func NewBlockChain(genesis string, difficulty int, store Store) (*BlockChain, er
 	if !errors.Is(err, ErrNotInitialized) {
 		return nil, fmt.Errorf("store already initialized")
 	}
-
-	gb := NewBlock(genesis, bc.Mask, []byte{})
+	gbTxn := NewCoinBaseTxn(genesis, nil)
+	gb := NewBlock([]*Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.Append(gb); err != nil {
 		return nil, fmt.Errorf("Add Genesis block to store failed: %w", err)
 	}
