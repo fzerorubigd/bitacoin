@@ -11,6 +11,7 @@ import (
 func main() {
 	var storePath string
 	flag.StringVar(&storePath, "store", os.Getenv("BC_STORE"), "The store to use")
+
 	flag.Usage = cli.Usage
 	flag.Parse()
 

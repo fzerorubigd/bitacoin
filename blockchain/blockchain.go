@@ -11,6 +11,8 @@ import (
 	"github.com/fzerorubigd/bitacoin/transaction"
 )
 
+var LoadedBlockChain *BlockChain
+
 // BlockChain is the group of a block, with difficulty level
 type BlockChain struct {
 	Difficulty int
@@ -121,7 +123,7 @@ func (bc *BlockChain) NewTransaction(from, to []byte, amount int) (*transaction.
 	}
 
 	if amount <= 0 {
-		return nil, fmt.Errorf("negative transfer?")
+		return nil, fmt.Errorf("amount must be more than 0")
 	}
 
 	if acc < amount {
@@ -209,6 +211,6 @@ func OpenBlockChain(difficulty int, store storege.Store) (*BlockChain, error) {
 	if err != nil {
 		return nil, fmt.Errorf("openning the store failed: %w", err)
 	}
-
+	LoadedBlockChain = &bc
 	return &bc, nil
 }
