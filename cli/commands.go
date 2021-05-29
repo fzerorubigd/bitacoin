@@ -1,11 +1,10 @@
-package main
+package cli
 
 import (
 	"flag"
 	"fmt"
+	"github.com/fzerorubigd/bitacoin/storege"
 	"os"
-
-	"github.com/fzerorubigd/bitacoin"
 )
 
 var (
@@ -16,10 +15,10 @@ type command struct {
 	Name        string
 	Description string
 
-	Run func(bitacoin.Store, ...string) error
+	Run func(storege.Store, ...string) error
 }
 
-func usage() {
+func Usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 
@@ -31,7 +30,7 @@ func usage() {
 
 }
 
-func dispatch(store bitacoin.Store, args ...string) error {
+func Dispatch(store storege.Store, args ...string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("atleast one arg is required")
 	}
@@ -47,7 +46,7 @@ func dispatch(store bitacoin.Store, args ...string) error {
 	return fmt.Errorf("invalid command")
 }
 
-func addCommand(name, description string, run func(bitacoin.Store, ...string) error) {
+func addCommand(name, description string, run func(storege.Store, ...string) error) {
 	allCommand = append(allCommand, command{
 		Name:        name,
 		Description: description,

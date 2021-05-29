@@ -1,13 +1,13 @@
-package main
+package cli
 
 import (
 	"flag"
 	"fmt"
-
-	"github.com/fzerorubigd/bitacoin"
+	"github.com/fzerorubigd/bitacoin/blockchain"
+	"github.com/fzerorubigd/bitacoin/storege"
 )
 
-func transfer(store bitacoin.Store, args ...string) error {
+func transfer(store storege.Store, args ...string) error {
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	var (
 		from, to string
@@ -19,12 +19,12 @@ func transfer(store bitacoin.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	bc, err := bitacoin.OpenBlockChain(difficulty, store)
+	bc, err := blockchain.OpenBlockChain(difficulty, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
 
-	txn, err := bitacoin.NewTransaction(bc, []byte(from), []byte(to), amount)
+	txn, err := bc.NewTransaction([]byte(from), []byte(to), amount)
 	if err != nil {
 		return fmt.Errorf("create transaction failed: %w", err)
 	}

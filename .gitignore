@@ -1,2 +1,4 @@
 *.cp
 cmd/bc/bc
+/bitacoin
+/.idea/

@@ -1,4 +1,4 @@
-package bitacoin
+package hasher
 
 import (
 	"crypto/sha256"

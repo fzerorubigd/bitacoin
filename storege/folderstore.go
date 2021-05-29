@@ -1,9 +1,10 @@
-package bitacoin
+package storege
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/fzerorubigd/bitacoin/block"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,9 +22,9 @@ type folderStore struct {
 	configPath string
 }
 
-func (fs *folderStore) Load(hash []byte) (*Block, error) {
+func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
 	path := filepath.Join(fs.root, fmt.Sprintf("%x.json", hash))
-	var b Block
+	var b block.Block
 	if err := readJSON(path, &b); err != nil {
 		return nil, fmt.Errorf("read JOSN file failed: %w", err)
 	}
@@ -31,7 +32,7 @@ func (fs *folderStore) Load(hash []byte) (*Block, error) {
 	return &b, nil
 }
 
-func (fs *folderStore) Append(b *Block) error {
+func (fs *folderStore) Append(b *block.Block) error {
 	if !bytes.Equal(fs.config.LastHash, b.PrevHash) {
 		return fmt.Errorf("store is out of sync")
 	}
@@ -93,11 +94,11 @@ func writeJSON(path string, v interface{}) error {
 // NewFolderStore create a file based storage for storing the blocks in the
 // files, each block is in one file, and also there is a config file, for
 // keep track of the last hash in the block
-func NewFolderStore(root string) Store {
+func NewFolderStore(storePath string) Store {
 	fs := &folderStore{
-		root:       root,
+		root:       storePath,
 		config:     &folderConfig{},
-		configPath: filepath.Join(root, "config.json"),
+		configPath: filepath.Join(storePath, "config.json"),
 	}
 
 	if err := readJSON(fs.configPath, fs.config); err != nil {

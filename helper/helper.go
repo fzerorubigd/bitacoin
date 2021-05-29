@@ -1,6 +1,6 @@
-package bitacoin
+package helper
 
-func inArray(in int, arr []int) bool {
+func InArray(in int, arr []int) bool {
 	for i := range arr {
 		if arr[i] == in {
 			return true

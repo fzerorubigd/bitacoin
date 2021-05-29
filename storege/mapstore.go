@@ -1,16 +1,17 @@
-package bitacoin
+package storege
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/fzerorubigd/bitacoin/block"
 )
 
 type mapStore struct {
-	data map[string]*Block
+	data map[string]*block.Block
 	last []byte
 }
 
-func (ms *mapStore) Load(hash []byte) (*Block, error) {
+func (ms *mapStore) Load(hash []byte) (*block.Block, error) {
 	x := fmt.Sprintf("%x", hash)
 	if b, ok := ms.data[x]; ok {
 		return b, nil
@@ -19,7 +20,7 @@ func (ms *mapStore) Load(hash []byte) (*Block, error) {
 	return nil, fmt.Errorf("block is not in this store")
 }
 
-func (ms *mapStore) Append(b *Block) error {
+func (ms *mapStore) Append(b *block.Block) error {
 	if !bytes.Equal(ms.last, b.PrevHash) {
 		return fmt.Errorf("store is out of sync")
 	}
@@ -46,6 +47,6 @@ func (ms *mapStore) LastHash() ([]byte, error) {
 // for tests
 func NewMapStore() Store {
 	return &mapStore{
-		data: make(map[string]*Block),
+		data: make(map[string]*block.Block),
 	}
 }
