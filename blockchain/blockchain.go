@@ -15,14 +15,15 @@ var LoadedBlockChain *BlockChain
 
 // BlockChain is the group of a block, with difficulty level
 type BlockChain struct {
-	Difficulty int
-	Mask       []byte
+	Difficulty       int
+	Mask             []byte
+	TransactionCount int
 
 	storege.Store
 }
 
-// Add a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) Add(data ...*transaction.Transaction) (*block.Block, error) {
+// MineNewBlock a new data to the end of the block chain by creating a new block
+func (bc *BlockChain) MineNewBlock(data ...*transaction.Transaction) (*block.Block, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("no data to add")
 	}
@@ -176,12 +177,13 @@ bigLoop:
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
 // block chain is the number of zeros in the beginning of the generated hash
-func NewBlockChain(genesis []byte, difficulty int, store storege.Store) (*BlockChain, error) {
+func NewBlockChain(genesis []byte, difficulty, transactionCount int, store storege.Store) (*BlockChain, error) {
 	mask := hasher.GenerateMask(difficulty)
 	bc := BlockChain{
-		Difficulty: difficulty,
-		Mask:       mask,
-		Store:      store,
+		Difficulty:       difficulty,
+		TransactionCount: transactionCount,
+		Mask:             mask,
+		Store:            store,
 	}
 
 	_, err := store.LastHash()
@@ -191,7 +193,7 @@ func NewBlockChain(genesis []byte, difficulty int, store storege.Store) (*BlockC
 	gbTxn := transaction.NewCoinBaseTxn(genesis, nil)
 	gb := block.NewBlock([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.Append(gb); err != nil {
-		return nil, fmt.Errorf("Add Genesis block to store failed: %w", err)
+		return nil, fmt.Errorf("MineNewBlock Genesis block to store failed: %w", err)
 	}
 
 	return &bc, nil
@@ -199,12 +201,13 @@ func NewBlockChain(genesis []byte, difficulty int, store storege.Store) (*BlockC
 
 // OpenBlockChain tries to open a blockchain, it returns an error if the blockchain store
 // is empty
-func OpenBlockChain(difficulty int, store storege.Store) (*BlockChain, error) {
+func OpenBlockChain(difficulty, transactionCount int, store storege.Store) (*BlockChain, error) {
 	mask := hasher.GenerateMask(difficulty)
 	bc := BlockChain{
-		Difficulty: difficulty,
-		Mask:       mask,
-		Store:      store,
+		Difficulty:       difficulty,
+		TransactionCount: transactionCount,
+		Mask:             mask,
+		Store:            store,
 	}
 
 	_, err := store.LastHash()

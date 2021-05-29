@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/helper"
+	"github.com/fzerorubigd/bitacoin/transaction"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +15,8 @@ type TransactionRequest struct {
 	ToPubKey   string
 	Amount     int
 }
+
+var memPool []*transaction.Transaction
 
 func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 	byteBody, err := ioutil.ReadAll(r.Body)
@@ -45,18 +48,25 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = blockchain.LoadedBlockChain.Add(txn)
-	if err != nil {
-		log.Printf("add transaction err: %s\n", err.Error())
-		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	log.Printf("successfull transaction: %+v\n", transaction)
+	log.Printf("new transaction in memPool: %+v\n", transaction)
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
-		"message":     "transferred successfully",
+		"message":     "transaction appended to memPool successfully",
 		"transaction": transaction,
 	})
+
+	memPool = append(memPool, txn)
+	if len(memPool) >= 5 {
+		newBlock, err := blockchain.LoadedBlockChain.MineNewBlock(txn)
+		if err != nil {
+			log.Printf("MineNewBlock err: %s\n", err.Error())
+			helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
+				"error": err.Error(),
+			})
+			return
+		} else {
+			log.Printf("mined new block successfully.\nlast hash: %x\nprevious hash: %x\n",
+				newBlock.Hash, newBlock.PrevHash)
+		}
+		memPool = nil
+	}
 }

@@ -16,7 +16,7 @@ func initialize(store storege.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	_, err := blockchain.NewBlockChain([]byte(genesis), difficulty, store)
+	_, err := blockchain.NewBlockChain([]byte(genesis), difficulty, transactionCount, store)
 	if err != nil {
 		return fmt.Errorf("create failed: %w", err)
 	}

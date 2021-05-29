@@ -19,7 +19,7 @@ func transfer(store storege.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	bc, err := blockchain.OpenBlockChain(difficulty, store)
+	bc, err := blockchain.OpenBlockChain(difficulty, transactionCount, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
@@ -29,7 +29,7 @@ func transfer(store storege.Store, args ...string) error {
 		return fmt.Errorf("create transaction failed: %w", err)
 	}
 
-	_, err = bc.Add(txn)
+	_, err = bc.MineNewBlock(txn)
 
 	return err
 }

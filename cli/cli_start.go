@@ -17,7 +17,7 @@ func start(store storege.Store, args ...string) error {
 	fs.StringVar(&address, "ip", "127.0.0.1", "ip address")
 	fs.Parse(args[1:])
 
-	_, err := blockchain.OpenBlockChain(difficulty, store)
+	_, err := blockchain.OpenBlockChain(difficulty, transactionCount, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}

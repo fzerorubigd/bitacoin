@@ -7,8 +7,6 @@ import (
 	"github.com/fzerorubigd/bitacoin/storege"
 )
 
-const difficulty = 2
-
 func balance(store storege.Store, args ...string) error {
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	var (
@@ -18,7 +16,7 @@ func balance(store storege.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	bc, err := blockchain.OpenBlockChain(difficulty, store)
+	bc, err := blockchain.OpenBlockChain(difficulty, transactionCount, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
