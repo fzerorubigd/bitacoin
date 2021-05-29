@@ -41,7 +41,7 @@ func (b *Block) Validate(mask []byte) error {
 	return nil
 }
 
-// NewBlock creates a new block in the system, it needs deficulty mask for
+// NewBlock creates a new block in the system, it needs difficulty mask for
 // create a good hash, and also the previous block hash
 func NewBlock(txns []*transaction.Transaction, mask, prevHash []byte) *Block {
 	b := Block{

@@ -9,7 +9,7 @@ import (
 var (
 	// ErrNotInitialized should be returned when the store
 	//needs the genesis block (no data is stored in the store)
-	ErrNotInitialized = errors.New("the store is not initialied, there is no block")
+	ErrNotInitialized = errors.New("the store is not initialized, there is no block")
 )
 
 // Store is an interface to handle the blockchain storage

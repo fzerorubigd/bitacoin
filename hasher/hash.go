@@ -30,7 +30,7 @@ func GoodEnough(mask []byte, hash []byte) bool {
 	return true
 }
 
-// EasyHash craete hash, the easy way, just a simple sha256 hash
+// EasyHash create hash, the easy way, just a simple sha256 hash
 func EasyHash(data ...interface{}) []byte {
 	hasher := sha256.New()
 

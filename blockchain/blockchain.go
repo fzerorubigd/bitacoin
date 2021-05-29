@@ -173,7 +173,7 @@ bigLoop:
 }
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
-// block chain is the number of zeros in the begining of the generated hash
+// block chain is the number of zeros in the beginning of the generated hash
 func NewBlockChain(genesis []byte, difficulty int, store storege.Store) (*BlockChain, error) {
 	mask := hasher.GenerateMask(difficulty)
 	bc := BlockChain{
