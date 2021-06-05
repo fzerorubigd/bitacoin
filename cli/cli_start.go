@@ -4,25 +4,25 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/blockchain"
+	"github.com/fzerorubigd/bitacoin/config"
 	"github.com/fzerorubigd/bitacoin/handlers"
 	"github.com/fzerorubigd/bitacoin/storege"
+	"log"
 	"net/http"
 )
 
 func start(store storege.Store, args ...string) error {
-	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
-	var port string
-	var address string
-	fs.StringVar(&port, "port", "9090", "http port")
-	fs.StringVar(&address, "ip", "127.0.0.1", "ip address")
-	fs.Parse(args[1:])
-
 	_, err := blockchain.OpenBlockChain(difficulty, transactionCount, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
 
-	host := fmt.Sprintf("%s:%s", address, port)
+	err = config.ReadConfigFile(flag.Arg(0))
+	if err != nil {
+		log.Fatalf("read config file err:%s\n", err.Error())
+	}
+
+	host := fmt.Sprintf("%s:%s", config.Config.IP, config.Config.Port)
 	http.HandleFunc("/transaction", handlers.TransactionHandler)
 	fmt.Printf("node started on host: %s\n", host)
 	return http.ListenAndServe(host, nil)

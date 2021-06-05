@@ -2,11 +2,10 @@ package storege
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/block"
+	"github.com/fzerorubigd/bitacoin/helper"
 	"log"
-	"os"
 	"path/filepath"
 )
 
@@ -25,7 +24,7 @@ type folderStore struct {
 func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
 	path := filepath.Join(fs.root, fmt.Sprintf("%x.json", hash))
 	var b block.Block
-	if err := readJSON(path, &b); err != nil {
+	if err := helper.ReadJSON(path, &b); err != nil {
 		return nil, fmt.Errorf("read JOSN file failed: %w", err)
 	}
 
@@ -38,12 +37,12 @@ func (fs *folderStore) Append(b *block.Block) error {
 	}
 
 	path := filepath.Join(fs.root, fmt.Sprintf("%x.json", b.Hash))
-	if err := writeJSON(path, b); err != nil {
+	if err := helper.WriteJSON(path, b); err != nil {
 		return fmt.Errorf("write JSON file failed: %w", err)
 	}
 
 	fs.config.LastHash = b.Hash
-	if err := writeJSON(fs.configPath, fs.config); err != nil {
+	if err := helper.WriteJSON(fs.configPath, fs.config); err != nil {
 		return fmt.Errorf("write configuration file failed: %w", err)
 	}
 
@@ -58,39 +57,6 @@ func (fs *folderStore) LastHash() ([]byte, error) {
 	return fs.config.LastHash, nil
 }
 
-func readJSON(path string, v interface{}) error {
-	fl, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("open file failed: %w", err)
-	}
-	defer fl.Close()
-
-	dec := json.NewDecoder(fl)
-
-	if err := dec.Decode(v); err != nil {
-		return fmt.Errorf("decode JSON content failed: %w", err)
-	}
-
-	return nil
-}
-
-func writeJSON(path string, v interface{}) error {
-	// TODO : fail if file exists
-	fl, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create file failed: %w", err)
-	}
-	defer fl.Close()
-
-	enc := json.NewEncoder(fl)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		return fmt.Errorf("encoding the JSON content failed: %w", err)
-	}
-
-	return nil
-}
-
 // NewFolderStore create a file based storage for storing the blocks in the
 // files, each block is in one file, and also there is a config file, for
 // keep track of the last hash in the block
@@ -98,10 +64,10 @@ func NewFolderStore(storePath string) Store {
 	fs := &folderStore{
 		root:       storePath,
 		config:     &folderConfig{},
-		configPath: filepath.Join(storePath, "config.json"),
+		configPath: filepath.Join(storePath, "lastHash.json"),
 	}
 
-	if err := readJSON(fs.configPath, fs.config); err != nil {
+	if err := helper.ReadJSON(fs.configPath, fs.config); err != nil {
 		log.Print("Empty store")
 		fs.config.LastHash = nil
 	}
