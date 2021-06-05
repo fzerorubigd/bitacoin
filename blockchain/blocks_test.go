@@ -14,7 +14,7 @@ func TestBlockCreation(t *testing.T) {
 	mask := hasher.GenerateMask(2)
 	prev := hasher.EasyHash("Prev hash")
 
-	b := block.NewBlock(data, mask, prev)
+	b := block.Mine(data, mask, prev)
 	if err := b.Validate(mask); err != nil {
 		t.Errorf("Validation failed: %q", err)
 		return

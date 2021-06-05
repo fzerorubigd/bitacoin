@@ -6,6 +6,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/config"
 	"github.com/fzerorubigd/bitacoin/handlers"
+	"github.com/fzerorubigd/bitacoin/repository"
 	"github.com/fzerorubigd/bitacoin/storege"
 	"log"
 	"net/http"
@@ -23,7 +24,11 @@ func start(store storege.Store, args ...string) error {
 	}
 
 	host := fmt.Sprintf("%s:%s", config.Config.IP, config.Config.Port)
-	http.HandleFunc("/transaction", handlers.TransactionHandler)
+
+	http.HandleFunc(repository.TransactionUrl, handlers.TransactionHandler)
+	http.HandleFunc(repository.ExploreUrl, handlers.ExploreHandler)
+	http.HandleFunc(repository.BlockUrl, handlers.BlockHandler)
+
 	fmt.Printf("node started on host: %s\n", host)
 	return http.ListenAndServe(host, nil)
 }

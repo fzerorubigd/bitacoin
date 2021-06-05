@@ -7,6 +7,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/block"
 	"github.com/fzerorubigd/bitacoin/hasher"
 	"github.com/fzerorubigd/bitacoin/helper"
+	"github.com/fzerorubigd/bitacoin/interactor"
 	"github.com/fzerorubigd/bitacoin/storege"
 	"github.com/fzerorubigd/bitacoin/transaction"
 )
@@ -31,7 +32,13 @@ func (bc *BlockChain) MineNewBlock(data ...*transaction.Transaction) (*block.Blo
 	if err != nil {
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
-	b := block.NewBlock(data, bc.Mask, hash)
+
+	b := block.Mine(data, bc.Mask, hash)
+	err = interactor.Shout(b)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := bc.Store.Append(b); err != nil {
 		return nil, fmt.Errorf("Append new block to store failed: %w", err)
 	}
@@ -191,7 +198,7 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 		return nil, fmt.Errorf("store already initialized")
 	}
 	gbTxn := transaction.NewCoinBaseTxn(genesis, nil)
-	gb := block.NewBlock([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
+	gb := block.Mine([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.Append(gb); err != nil {
 		return nil, fmt.Errorf("MineNewBlock Genesis block to store failed: %w", err)
 	}
