@@ -28,45 +28,43 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaction := TransactionRequest{}
-	err = json.Unmarshal(byteBody, &transaction)
+	transactionRequest := TransactionRequest{}
+	err = json.Unmarshal(byteBody, &transactionRequest)
 	if err != nil {
-		log.Printf("transaction unmarshal err: %s\n", err.Error())
+		log.Printf("transactionRequest unmarshal err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "Bad Request",
 		})
 		return
 	}
 
-	txn, err := blockchain.LoadedBlockChain.NewTransaction([]byte(transaction.FromPubkey),
-		[]byte(transaction.ToPubKey), transaction.Amount)
+	txn, err := blockchain.LoadedBlockChain.NewTransaction([]byte(transactionRequest.FromPubkey),
+		[]byte(transactionRequest.ToPubKey), transactionRequest.Amount)
 	if err != nil {
-		log.Printf("new transaction err: %s\n", err.Error())
+		log.Printf("new transactionRequest err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	log.Printf("new transaction in memPool: %+v\n", transaction)
+	log.Printf("new transactionRequest in memPool: %+v\n", transactionRequest)
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
-		"message":     "transaction appended to memPool successfully",
-		"transaction": transaction,
+		"message":            "transactionRequest appended to memPool successfully",
+		"transactionRequest": transactionRequest,
 	})
 
 	memPool = append(memPool, txn)
-	if len(memPool) >= 5 {
-		newBlock, err := blockchain.LoadedBlockChain.MineNewBlock(txn)
-		if err != nil {
-			log.Printf("MineNewBlock err: %s\n", err.Error())
-			helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
-				"error": err.Error(),
-			})
-			return
-		} else {
-			log.Printf("mined new block successfully.\nlast hash: %x\nprevious hash: %x\n",
-				newBlock.Hash, newBlock.PrevHash)
-		}
+	if len(memPool) >= blockchain.LoadedBlockChain.TransactionCount {
+		go func() {
+			newBlock, err := blockchain.LoadedBlockChain.MineNewBlock(txn)
+			if err != nil {
+				log.Printf("MineNewBlock err: %s\n", err.Error())
+			} else {
+				log.Printf("mined new block successfully.\nlast hash: %x\nprevious hash: %x\n",
+					newBlock.Hash, newBlock.PrevHash)
+			}
+		}()
 		memPool = nil
 	}
 }
