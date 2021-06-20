@@ -11,10 +11,15 @@ import (
 	"sync"
 )
 
-func init() {
-	Explore(config.Config.InitialNodes)
-	if len(Explorer.nodes) < 1 {
-		log.Fatalf("no nodes found!!! check initialNodes.json and network connection")
+func Init() {
+	Explorer = &explorer{
+		nodes: make(map[string]struct{}),
+		mutex: sync.Mutex{},
+	}
+	if len(config.Config.InitialNodes) < 1 {
+		log.Printf("This is the first node of the cryptocurrenct network!")
+	} else {
+		Scan(config.Config.InitialNodes)
 	}
 }
 
@@ -24,28 +29,37 @@ type explorer struct {
 }
 
 func (e *explorer) AddNewNode(nodeAddr string) {
-
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	e.nodes[nodeAddr] = struct{}{}
 }
 
-func (e *explorer) Nodes() []string {
-	nodes := make([]string, len(e.nodes))
-	for node := range e.nodes {
-		nodes = append(nodes, node)
-	}
-	return nodes
+func (e *explorer) Nodes() map[string]struct{} {
+	return e.nodes
 }
 
 var Explorer = &explorer{}
 
-func Explore(initialNodes []string) {
+func Scan(initialNodes []string) {
 	for i := range initialNodes {
-		response, err := http.Get(fmt.Sprintf("%s/%s?port=%d", initialNodes[i], repository.ExploreUrl,
-			config.Config.Port))
+		if initialNodes[i] == "" {
+			continue
+		}
+
+		request, err := http.NewRequest("GET", fmt.Sprintf("%s%s", initialNodes[i], repository.ExploreUrl),
+			nil)
 		if err != nil {
-			log.Printf("could not send Explore request to node %s err: %s\n", initialNodes[i], err.Error())
+			log.Printf("could not create request err: %s\n", err.Error())
+			continue
+		}
+
+		query := request.URL.Query()
+		query.Add("port", config.Config.Port)
+		request.URL.RawQuery = query.Encode()
+
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			log.Printf("could not scan node %s err: %s\n", initialNodes[i], err.Error())
 			continue
 		}
 
@@ -54,7 +68,7 @@ func Explore(initialNodes []string) {
 			respBody, _ := ioutil.ReadAll(response.Body)
 			err = json.Unmarshal(respBody, &exploreResponse)
 			if err != nil {
-				log.Printf("unmarshal body error in Explore: %s\n", err.Error())
+				log.Printf("unmarshal body error in Scan: %s\n", err.Error())
 				continue
 			}
 			Explorer.AddNewNode(initialNodes[i])
@@ -71,5 +85,9 @@ func Explore(initialNodes []string) {
 			}
 			log.Printf("received error from node %s err: %s\n", initialNodes[i], responseMap["error"])
 		}
+	}
+
+	if len(Explorer.nodes) < 1 {
+		log.Fatalf("could not connect to any other nodes, check your config file and your network connection")
 	}
 }

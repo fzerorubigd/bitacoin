@@ -45,7 +45,7 @@ func (ms *mapStore) LastHash() ([]byte, error) {
 
 // NewMapStore is used to create an in memory and not persistent storage, useful
 // for tests
-func NewMapStore() Store {
+func NewMapStore() *mapStore {
 	return &mapStore{
 		data: make(map[string]*block.Block),
 	}

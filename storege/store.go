@@ -20,11 +20,14 @@ type Store interface {
 	// Append should append the block to the store, it should check if the
 	// last block hash match with the hash in the new block and also updates
 	// the last hash
-	Append(b *block.Block) error
+	AppendBlock(b *block.Block) error
 
 	// LastHash returns the last hash in the store, if there is no block
 	// (not even the genesis block) it should return the ErrNotInitialized
 	LastHash() ([]byte, error)
+
+	DataPath() string
+	WriteJSON(fileName string, data interface{}) error
 }
 
 // Iterate over the blocks in the store, if the callback returns an error it

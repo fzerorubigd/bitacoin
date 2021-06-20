@@ -1,6 +1,8 @@
 package config
 
-import "github.com/fzerorubigd/bitacoin/helper"
+import (
+	"github.com/fzerorubigd/bitacoin/helper"
+)
 
 var Config BlockChainConfig
 

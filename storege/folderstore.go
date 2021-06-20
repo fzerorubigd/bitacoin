@@ -5,24 +5,18 @@ import (
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/block"
 	"github.com/fzerorubigd/bitacoin/helper"
+	"github.com/fzerorubigd/bitacoin/repository"
 	"log"
 	"path/filepath"
 )
 
-type folderConfig struct {
-	LastHash []byte
-}
-
 type folderStore struct {
-	root string
-
-	config *folderConfig
-
-	configPath string
+	dataPath string
+	lastHash []byte
 }
 
 func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
-	path := filepath.Join(fs.root, fmt.Sprintf("%x.json", hash))
+	path := filepath.Join(fs.dataPath, fmt.Sprintf("%x.json", hash))
 	var b block.Block
 	if err := helper.ReadJSON(path, &b); err != nil {
 		return nil, fmt.Errorf("read JOSN file failed: %w", err)
@@ -31,18 +25,19 @@ func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
 	return &b, nil
 }
 
-func (fs *folderStore) Append(b *block.Block) error {
-	if !bytes.Equal(fs.config.LastHash, b.PrevHash) {
+func (fs *folderStore) AppendBlock(b *block.Block) error {
+	if !bytes.Equal(fs.lastHash, b.PrevHash) {
 		return fmt.Errorf("store is out of sync")
 	}
 
-	path := filepath.Join(fs.root, fmt.Sprintf("%x.json", b.Hash))
+	path := filepath.Join(fs.dataPath, fmt.Sprintf("%x.json", b.Hash))
 	if err := helper.WriteJSON(path, b); err != nil {
 		return fmt.Errorf("write JSON file failed: %w", err)
 	}
 
-	fs.config.LastHash = b.Hash
-	if err := helper.WriteJSON(fs.configPath, fs.config); err != nil {
+	fs.lastHash = b.Hash
+	if err := helper.WriteJSON(filepath.Join(fs.dataPath, repository.LastHashFileName),
+		map[string][]byte{"lastHash": fs.lastHash}); err != nil {
 		return fmt.Errorf("write configuration file failed: %w", err)
 	}
 
@@ -50,11 +45,25 @@ func (fs *folderStore) Append(b *block.Block) error {
 }
 
 func (fs *folderStore) LastHash() ([]byte, error) {
-	if len(fs.config.LastHash) == 0 {
+	if len(fs.lastHash) == 0 {
 		return nil, ErrNotInitialized
 	}
 
-	return fs.config.LastHash, nil
+	return fs.lastHash, nil
+}
+
+func (fs *folderStore) DataPath() string {
+	return fs.dataPath
+}
+
+func (fs *folderStore) WriteJSON(fileName string, data interface{}) error {
+	path := filepath.Join(fs.dataPath, fileName)
+	err := helper.WriteJSON(path, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewFolderStore create a file based storage for storing the blocks in the
@@ -62,14 +71,14 @@ func (fs *folderStore) LastHash() ([]byte, error) {
 // keep track of the last hash in the block
 func NewFolderStore(storePath string) Store {
 	fs := &folderStore{
-		root:       storePath,
-		config:     &folderConfig{},
-		configPath: filepath.Join(storePath, "lastHash.json"),
+		dataPath: storePath,
 	}
-
-	if err := helper.ReadJSON(fs.configPath, fs.config); err != nil {
+	lastHashFile := make(map[string][]byte)
+	if err := helper.ReadJSON(filepath.Join(fs.dataPath, repository.LastHashFileName), &lastHashFile); err != nil {
 		log.Print("Empty store")
-		fs.config.LastHash = nil
+		fs.lastHash = nil
+	} else if lastHashFile["lastHash"] != nil {
+		fs.lastHash = lastHashFile["lastHash"]
 	}
 
 	return fs

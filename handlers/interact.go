@@ -9,7 +9,7 @@ import (
 
 func ExploreHandler(w http.ResponseWriter, r *http.Request) {
 	response := make(map[string][]string)
-	response["nodes"] = interactor.Explorer.Nodes()
+	response["nodes"] = helper.ExtractKeysFromMap(interactor.Explorer.Nodes())
 
 	port := r.URL.Query().Get("port")
 	if port == "" {

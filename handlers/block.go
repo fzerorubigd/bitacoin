@@ -38,7 +38,7 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = blockchain.LoadedBlockChain.Append(&newBlock)
+	err = blockchain.LoadedBlockChain.AppendBlock(&newBlock)
 	if err != nil {
 		log.Printf("append new block err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{

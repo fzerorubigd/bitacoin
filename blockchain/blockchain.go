@@ -39,8 +39,8 @@ func (bc *BlockChain) MineNewBlock(data ...*transaction.Transaction) (*block.Blo
 		return nil, err
 	}
 
-	if err := bc.Store.Append(b); err != nil {
-		return nil, fmt.Errorf("Append new block to store failed: %w", err)
+	if err := bc.Store.AppendBlock(b); err != nil {
+		return nil, fmt.Errorf("AppendBlock new block to store failed: %w", err)
 	}
 
 	return b, nil
@@ -199,7 +199,7 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 	}
 	gbTxn := transaction.NewCoinBaseTxn(genesis, nil)
 	gb := block.Mine([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
-	if err := store.Append(gb); err != nil {
+	if err := store.AppendBlock(gb); err != nil {
 		return nil, fmt.Errorf("MineNewBlock Genesis block to store failed: %w", err)
 	}
 
