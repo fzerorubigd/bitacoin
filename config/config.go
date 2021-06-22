@@ -10,6 +10,7 @@ type BlockChainConfig struct {
 	IP           string
 	Port         string
 	InitialNodes []string
+	MinterPubKey string
 }
 
 func ReadConfigFile(path string) error {

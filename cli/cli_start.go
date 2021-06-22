@@ -32,6 +32,8 @@ func start(store storege.Store, args ...string) error {
 		log.Fatalf("read config file err:%s\n", err.Error())
 	}
 
+	blockchain.LoadedBlockChain.MinerPubKey = []byte(config.Config.MinterPubKey)
+
 	interactor.Init()
 	host := fmt.Sprintf("%s:%s", config.Config.IP, config.Config.Port)
 

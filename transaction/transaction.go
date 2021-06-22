@@ -3,14 +3,11 @@ package transaction
 import (
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/hasher"
+	"github.com/fzerorubigd/bitacoin/repository"
 	"time"
 )
 
 import "bytes"
-
-const (
-	coinBaseReward = 100000
-)
 
 type TransactionRequest struct {
 	Time       int64
@@ -61,7 +58,7 @@ func NewCoinBaseTxn(toPubKey []byte) *Transaction {
 	}
 
 	txo := OutputCoin{
-		Amount:   coinBaseReward,
+		Amount:   repository.CoinbaseReward,
 		ToPubKey: toPubKey,
 	}
 	txn := &Transaction{
@@ -73,7 +70,7 @@ func NewCoinBaseTxn(toPubKey []byte) *Transaction {
 		FromPubKey: nil,
 		ToPubKey:   toPubKey,
 		Signature:  nil,
-		Amount:     coinBaseReward,
+		Amount:     repository.CoinbaseReward,
 	})
 	return txn
 }

@@ -21,20 +21,26 @@ type BlockChain struct {
 	Mask             []byte
 	TransactionCount int
 	CancelMining     context.CancelFunc
+	MinerPubKey      []byte
 	storege.Store
 }
 
 // StartMining a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) StartMining(ctx context.Context, data ...*transaction.Transaction) (*block.Block, error) {
-	if len(data) == 0 {
-		return nil, fmt.Errorf("no data to add")
+func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transaction.Transaction) (*block.Block, error) {
+	if len(transactions) == 0 {
+		return nil, fmt.Errorf("no transactions to add")
 	}
 	hash, err := bc.Store.LastHash()
 	if err != nil {
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
 
-	b := block.StartMining(ctx, data, bc.Mask, hash)
+	coinbaseTnx := transaction.NewCoinBaseTxn(bc.MinerPubKey)
+	transactionsPlusCoinbase := make([]*transaction.Transaction, len(transactions)+1)
+	transactionsPlusCoinbase[0] = coinbaseTnx
+	transactionsPlusCoinbase = append(transactionsPlusCoinbase, transactions...)
+
+	b := block.StartMining(ctx, transactionsPlusCoinbase, bc.Mask, hash)
 	err = interactor.Shout(b)
 	if err != nil {
 		return nil, err
@@ -148,7 +154,7 @@ func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest)
 
 	var (
 		vin      []transaction.InputCoin
-		required = tnxRequest.Amount
+		required = tnxRequest.Amount + repository.TransactionFree
 	)
 
 bigLoop:
@@ -167,10 +173,14 @@ bigLoop:
 		}
 	}
 
-	vout := []transaction.OutputCoin{
+	OutputCoins := []transaction.OutputCoin{
 		{
 			Amount:   tnxRequest.Amount,
 			ToPubKey: tnxRequest.ToPubKey,
+		},
+		{
+			Amount:   repository.TransactionFree,
+			ToPubKey: bc.MinerPubKey,
 		},
 	}
 	if required < 0 {
@@ -183,8 +193,8 @@ bigLoop:
 	txn := &transaction.Transaction{
 		ID:          tnxID,
 		Time:        tnxRequest.Time,
-		InputCoins:  vin,
-		OutputCoins: vout,
+		OutputCoins: vin,
+		InputCoins:  OutputCoins,
 		Sig:         tnxRequest.Signature,
 	}
 
