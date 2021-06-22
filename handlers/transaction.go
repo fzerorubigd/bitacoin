@@ -10,12 +10,6 @@ import (
 	"net/http"
 )
 
-type TransactionRequest struct {
-	FromPubkey string
-	ToPubKey   string
-	Amount     int
-}
-
 var memPool []*transaction.Transaction
 
 func TransactionHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,30 +22,29 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transactionRequest := TransactionRequest{}
-	err = json.Unmarshal(byteBody, &transactionRequest)
+	tnxRequest := transaction.TransactionRequest{}
+	err = json.Unmarshal(byteBody, &tnxRequest)
 	if err != nil {
-		log.Printf("transactionRequest unmarshal err: %s\n", err.Error())
+		log.Printf("tnxRequest unmarshal err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "Bad Request",
 		})
 		return
 	}
 
-	txn, err := blockchain.LoadedBlockChain.NewTransaction([]byte(transactionRequest.FromPubkey),
-		[]byte(transactionRequest.ToPubKey), transactionRequest.Amount)
+	txn, err := blockchain.LoadedBlockChain.NewTransaction(&tnxRequest)
 	if err != nil {
-		log.Printf("new transactionRequest err: %s\n", err.Error())
+		log.Printf("new tnxRequest err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	log.Printf("new transactionRequest in memPool: %+v\n", transactionRequest)
+	log.Printf("new tnxRequest in memPool: %+v\n", tnxRequest)
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
-		"message":            "transactionRequest appended to memPool successfully",
-		"transactionRequest": transactionRequest,
+		"message":    "tnxRequest appended to memPool successfully",
+		"tnxRequest": tnxRequest,
 	})
 
 	memPool = append(memPool, txn)

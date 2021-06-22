@@ -83,7 +83,7 @@ func (bc *BlockChain) Validate() error {
 	})
 }
 
-func (bc *BlockChain) UnspentTxn(address []byte) (map[string]*transaction.Transaction, map[string][]int, int, error) {
+func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]*transaction.Transaction, map[string][]int, int, error) {
 	spent := make(map[string][]int)
 	txom := make(map[string][]int)
 	txns := make(map[string]*transaction.Transaction)
@@ -92,11 +92,11 @@ func (bc *BlockChain) UnspentTxn(address []byte) (map[string]*transaction.Transa
 		for _, txn := range b.Transactions {
 			txnID := hex.EncodeToString(txn.ID)
 
-			for i := range txn.VOut {
-				if txn.VOut[i].TryUnlock(address) && !helper.InArray(i, spent[txnID]) {
+			for i := range txn.OutputCoins {
+				if txn.OutputCoins[i].OwnedBy(pubKey) && !helper.InArray(i, spent[txnID]) {
 					txns[txnID] = txn
 					txom[txnID] = append(txom[txnID], i)
-					acc += txn.VOut[i].Value
+					acc += txn.OutputCoins[i].Amount
 				}
 			}
 
@@ -106,10 +106,10 @@ func (bc *BlockChain) UnspentTxn(address []byte) (map[string]*transaction.Transa
 				continue
 			}
 
-			for i := range txn.VIn {
-				if txn.VIn[i].MatchLock(address) {
-					outID := hex.EncodeToString(txn.VIn[i].TXID)
-					spent[outID] = append(spent[outID], txn.VIn[i].VOut)
+			for i := range txn.InputCoins {
+				if txn.InputCoins[i].OwnedBy(pubKey) {
+					outID := hex.EncodeToString(txn.InputCoins[i].TXID)
+					spent[outID] = append(spent[outID], txn.InputCoins[i].OutputTransactionIndex)
 				}
 			}
 
@@ -124,33 +124,40 @@ func (bc *BlockChain) UnspentTxn(address []byte) (map[string]*transaction.Transa
 	return txns, txom, acc, nil
 }
 
-func (bc *BlockChain) NewTransaction(from, to []byte, amount int) (*transaction.Transaction, error) {
-	txns, txom, acc, err := bc.UnspentTxn(from)
+func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest) (*transaction.Transaction, error) {
+	err := transaction.VerifySig(tnxRequest)
+	if err != nil {
+		return nil, fmt.Errorf("vrify signiture err: %s", err.Error())
+	}
+
+	tnxID := transaction.ExtractTxnID(tnxRequest)
+
+	txns, txnsOut, acc, err := bc.UnspentTxn(tnxRequest.FromPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("get unused txn failed: %w", err)
 	}
 
-	if amount <= 0 {
+	if tnxRequest.Amount <= 0 {
 		return nil, fmt.Errorf("amount must be more than 0")
 	}
 
-	if acc < amount {
-		return nil, fmt.Errorf("not enough money, want %d have %d", amount, acc)
+	if acc < tnxRequest.Amount {
+		return nil, fmt.Errorf("not enough money, want %d have %d", tnxRequest.Amount, acc)
 	}
 
 	var (
-		vin      []transaction.TXInput
-		required = amount
+		vin      []transaction.InputCoin
+		required = tnxRequest.Amount
 	)
 
 bigLoop:
 	for id, txn := range txns {
-		for _, v := range txom[id] {
-			required -= txn.VOut[v].Value
-			vin = append(vin, transaction.TXInput{
-				TXID: txn.ID,
-				VOut: v,
-				Sig:  from, // TODO : real sign
+		for _, v := range txnsOut[id] {
+			required -= txn.OutputCoins[v].Amount
+			vin = append(vin, transaction.InputCoin{
+				TXID:                   txn.ID,
+				OutputTransactionIndex: v,
+				FromPubKey:             tnxRequest.FromPubKey,
 			})
 
 			if required <= 0 {
@@ -159,25 +166,26 @@ bigLoop:
 		}
 	}
 
-	vout := []transaction.TXOutput{
+	vout := []transaction.OutputCoin{
 		{
-			Value:  amount,
-			PubKey: to,
+			Amount:   tnxRequest.Amount,
+			ToPubKey: tnxRequest.ToPubKey,
 		},
 	}
 	if required < 0 {
-		vout = append(vout, transaction.TXOutput{
-			Value:  -required,
-			PubKey: from,
+		vout = append(vout, transaction.OutputCoin{
+			Amount:   -required,
+			ToPubKey: tnxRequest.FromPubKey,
 		})
 	}
 
 	txn := &transaction.Transaction{
-		VIn:  vin,
-		VOut: vout,
+		ID:          tnxID,
+		Time:        tnxRequest.Time,
+		InputCoins:  vin,
+		OutputCoins: vout,
+		Sig:         tnxRequest.Signature,
 	}
-
-	txn.ID = transaction.CalculateTxnID(txn)
 
 	return txn, nil
 }
@@ -197,7 +205,7 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 	if !errors.Is(err, storege.ErrNotInitialized) {
 		return nil, fmt.Errorf("store already initialized")
 	}
-	gbTxn := transaction.NewCoinBaseTxn(genesis, nil)
+	gbTxn := transaction.NewCoinBaseTxn(genesis)
 	gb := block.Mine([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.AppendBlock(gb); err != nil {
 		return nil, fmt.Errorf("MineNewBlock Genesis block to store failed: %w", err)

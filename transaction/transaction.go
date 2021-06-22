@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"fmt"
 	"github.com/fzerorubigd/bitacoin/hasher"
 	"time"
 )
@@ -11,63 +12,69 @@ const (
 	coinBaseReward = 100000
 )
 
-type Transaction struct {
-	ID []byte
+type TransactionRequest struct {
+	Time       int64
+	FromPubKey []byte
+	ToPubKey   []byte
+	Signature  []byte
+	Amount     int
+}
 
-	VOut []TXOutput
-	VIn  []TXInput
+type Transaction struct {
+	Time        int64
+	ID          []byte
+	Sig         []byte
+	InputCoins  []InputCoin
+	OutputCoins []OutputCoin
+}
+
+type OutputCoin struct {
+	Amount   int
+	ToPubKey []byte
+}
+
+type InputCoin struct {
+	TXID                   []byte
+	OutputTransactionIndex int
+	FromPubKey             []byte
 }
 
 func (txn *Transaction) IsCoinBase() bool {
-	return len(txn.VOut) == 1 &&
-		len(txn.VIn) == 1 &&
-		txn.VIn[0].VOut == -1 &&
-		len(txn.VIn[0].TXID) == 0
+	return len(txn.OutputCoins) == 1 &&
+		len(txn.InputCoins) == 1 &&
+		txn.InputCoins[0].OutputTransactionIndex == -1 &&
+		len(txn.InputCoins[0].TXID) == 0
 }
 
-type TXOutput struct {
-	Value  int
-	PubKey []byte
+func (txo *OutputCoin) OwnedBy(key []byte) bool {
+	return bytes.Equal(txo.ToPubKey, key)
 }
 
-func (txo *TXOutput) TryUnlock(key []byte) bool {
-	return bytes.Equal(txo.PubKey, key)
+func (txi *InputCoin) OwnedBy(key []byte) bool {
+	return bytes.Equal(txi.FromPubKey, key)
 }
 
-type TXInput struct {
-	TXID []byte
-	VOut int
-	Sig  []byte
-}
-
-func (txi *TXInput) MatchLock(key []byte) bool {
-	return bytes.Equal(txi.Sig, key)
-}
-
-func CalculateTxnID(txn *Transaction) []byte {
-	return hasher.EasyHash(txn.VOut, txn.VIn)
-}
-
-func NewCoinBaseTxn(to, data []byte) *Transaction {
-	if len(data) == 0 {
-		data = hasher.EasyHash(to, time.Now())
+func NewCoinBaseTxn(toPubKey []byte) *Transaction {
+	txi := InputCoin{
+		TXID:                   []byte{},
+		OutputTransactionIndex: -1,
 	}
 
-	txi := TXInput{
-		TXID: []byte{},
-		VOut: -1,
-		Sig:  data,
-	}
-
-	txo := TXOutput{
-		Value:  coinBaseReward,
-		PubKey: to,
+	txo := OutputCoin{
+		Amount:   coinBaseReward,
+		ToPubKey: toPubKey,
 	}
 	txn := &Transaction{
-		VOut: []TXOutput{txo},
-		VIn:  []TXInput{txi},
+		InputCoins:  []InputCoin{txi},
+		OutputCoins: []OutputCoin{txo},
 	}
-	txn.ID = CalculateTxnID(txn)
+	txn.ID = ExtractTxnID(&TransactionRequest{
+		Time:       time.Now().UnixNano(),
+		FromPubKey: nil,
+		ToPubKey:   toPubKey,
+		Signature:  nil,
+		Amount:     coinBaseReward,
+	})
 	return txn
 }
 
@@ -78,4 +85,11 @@ func CalculateTxnsHash(txns ...*Transaction) []byte {
 	}
 
 	return hasher.EasyHash(data...)
+}
+
+func ExtractTxnID(tnxRequest *TransactionRequest) []byte {
+	timeString := fmt.Sprint(tnxRequest.Time)
+	buf := bytes.NewBuffer(make([]byte, len(tnxRequest.Signature)+len(timeString)))
+	_, _ = fmt.Fprint(buf, tnxRequest.Signature, timeString)
+	return buf.Bytes()
 }
