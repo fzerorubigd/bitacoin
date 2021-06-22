@@ -42,6 +42,16 @@ func (b *Block) Validate(mask []byte) error {
 	return nil
 }
 
+func (b *Block) Contains(tnxID []byte) bool {
+	for i := range b.Transactions {
+		if bytes.Equal(tnxID, b.Transactions[i].ID) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // StartMining creates a new block in the system, it needs difficulty mask for
 // create a good hash, and also the previous block hash
 func StartMining(ctx context.Context, txns []*transaction.Transaction, mask, prevHash []byte) *Block {

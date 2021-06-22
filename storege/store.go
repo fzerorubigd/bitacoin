@@ -28,6 +28,7 @@ type Store interface {
 
 	DataPath() string
 	WriteJSON(fileName string, data interface{}) error
+	LastFourthBlocks() []*block.Block
 }
 
 // Iterate over the blocks in the store, if the callback returns an error it

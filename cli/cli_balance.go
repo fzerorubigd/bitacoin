@@ -21,7 +21,7 @@ func balance(store storege.Store, args ...string) error {
 		return fmt.Errorf("open failed: %w", err)
 	}
 
-	_, _, acc, err := bc.UnspentTxn([]byte(owner))
+	_, acc, err := bc.UnspentTxn([]byte(owner))
 	if err != nil {
 		return fmt.Errorf("get balance failed: %w", err)
 	}

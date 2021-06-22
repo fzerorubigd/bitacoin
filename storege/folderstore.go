@@ -11,8 +11,9 @@ import (
 )
 
 type folderStore struct {
-	dataPath string
-	lastHash []byte
+	dataPath         string
+	lastHash         []byte
+	lastFourthBlocks []*block.Block
 }
 
 func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
@@ -41,6 +42,16 @@ func (fs *folderStore) AppendBlock(b *block.Block) error {
 		return fmt.Errorf("write configuration file failed: %w", err)
 	}
 
+	lastFourthBlocks := make([]*block.Block, len(fs.lastFourthBlocks))
+	lastFourthBlocks[0] = b
+	if len(fs.lastFourthBlocks) < 4 {
+		lastFourthBlocks = append(lastFourthBlocks, fs.lastFourthBlocks...)
+		fs.lastFourthBlocks = lastFourthBlocks
+	} else {
+		lastFourthBlocks = append(lastFourthBlocks, fs.lastFourthBlocks[:3]...)
+		fs.lastFourthBlocks = lastFourthBlocks
+	}
+
 	return nil
 }
 
@@ -64,6 +75,10 @@ func (fs *folderStore) WriteJSON(fileName string, data interface{}) error {
 	}
 
 	return nil
+}
+
+func (fs *folderStore) LastFourthBlocks() []*block.Block {
+	return fs.lastFourthBlocks
 }
 
 // NewFolderStore create a file based storage for storing the blocks in the

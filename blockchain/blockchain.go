@@ -2,13 +2,13 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/block"
 	"github.com/fzerorubigd/bitacoin/hasher"
 	"github.com/fzerorubigd/bitacoin/helper"
 	"github.com/fzerorubigd/bitacoin/interactor"
+	"github.com/fzerorubigd/bitacoin/repository"
 	"github.com/fzerorubigd/bitacoin/storege"
 	"github.com/fzerorubigd/bitacoin/transaction"
 )
@@ -90,56 +90,69 @@ func (bc *BlockChain) Validate() error {
 	})
 }
 
-func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]*transaction.Transaction, map[string][]int, int, error) {
-	spent := make(map[string][]int)
-	txom := make(map[string][]int)
-	txns := make(map[string]*transaction.Transaction)
-	acc := 0
+func (bc *BlockChain) UnspentTxn(pubKey []byte) ([]*transaction.UnspentTransaction, int, error) {
+	spent := []int{}
+	unspentTxns := []*transaction.UnspentTransaction{}
+	IndexAmount := make(map[int]int)
+	Balance := 0
 	err := storege.Iterate(bc.Store, func(b *block.Block) error {
 		for _, txn := range b.Transactions {
-			txnID := hex.EncodeToString(txn.ID)
-
-			for i := range txn.OutputCoins {
-				if txn.OutputCoins[i].OwnedBy(pubKey) && !helper.InArray(i, spent[txnID]) {
-					txns[txnID] = txn
-					txom[txnID] = append(txom[txnID], i)
-					acc += txn.OutputCoins[i].Amount
+			for outputCoinIndex, OutputCoin := range txn.OutputCoins {
+				if OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent) {
+					IndexAmount[outputCoinIndex] = OutputCoin.Amount
+					Balance += OutputCoin.Amount
 				}
 			}
 
-			delete(spent, txnID)
+			spent = spent[:]
 
 			if txn.IsCoinBase() {
 				continue
 			}
 
-			for i := range txn.InputCoins {
-				if txn.InputCoins[i].OwnedBy(pubKey) {
-					outID := hex.EncodeToString(txn.InputCoins[i].TXID)
-					spent[outID] = append(spent[outID], txn.InputCoins[i].OutputTransactionIndex)
+			for _, inputCoin := range txn.InputCoins {
+				if inputCoin.OwnedBy(pubKey) {
+					spent = append(spent, inputCoin.OutputCoinIndex)
 				}
 			}
 
+			if len(IndexAmount) > 0 {
+				unspentTxns = append(unspentTxns, &transaction.UnspentTransaction{
+					ID:                     txn.ID,
+					OutputCoinsIndexAmount: IndexAmount,
+				})
+			}
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("iterate error: %w", err)
+		return nil, 0, fmt.Errorf("iterate error: %w", err)
 	}
 
-	return txns, txom, acc, nil
+	return unspentTxns, Balance, nil
 }
 
 func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest) (*transaction.Transaction, error) {
+	lastFourthBlocks := bc.LastFourthBlocks()
+	if lastFourthBlocks[len(lastFourthBlocks)-1].Timestamp.After(tnxRequest.Time) {
+		return nil, fmt.Errorf("transaction is expired")
+	}
+
+	tnxID := transaction.ExtractTxnID(tnxRequest)
+
+	for _, oldBlock := range lastFourthBlocks {
+		if oldBlock.Contains(tnxID) {
+			return nil, fmt.Errorf("transaction already exist in the blockchain")
+		}
+	}
+
 	err := transaction.VerifySig(tnxRequest)
 	if err != nil {
 		return nil, fmt.Errorf("vrify signiture err: %s", err.Error())
 	}
 
-	tnxID := transaction.ExtractTxnID(tnxRequest)
-
-	txns, txnsOut, acc, err := bc.UnspentTxn(tnxRequest.FromPubKey)
+	unspentTxns, balance, err := bc.UnspentTxn(tnxRequest.FromPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("get unused txn failed: %w", err)
 	}
@@ -148,23 +161,23 @@ func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest)
 		return nil, fmt.Errorf("amount must be more than 0")
 	}
 
-	if acc < tnxRequest.Amount {
-		return nil, fmt.Errorf("not enough money, want %d have %d", tnxRequest.Amount, acc)
+	if balance < tnxRequest.Amount {
+		return nil, fmt.Errorf("not enough money, want %d have %d", tnxRequest.Amount, balance)
 	}
 
 	var (
-		vin      []transaction.InputCoin
-		required = tnxRequest.Amount + repository.TransactionFree
+		inputCoins []*transaction.InputCoin
+		required   = tnxRequest.Amount + repository.TransactionFree
 	)
 
 bigLoop:
-	for id, txn := range txns {
-		for _, v := range txnsOut[id] {
-			required -= txn.OutputCoins[v].Amount
-			vin = append(vin, transaction.InputCoin{
-				TXID:                   txn.ID,
-				OutputTransactionIndex: v,
-				FromPubKey:             tnxRequest.FromPubKey,
+	for _, unspentTxn := range unspentTxns {
+		for outputCoinIndex, outputCoinAmount := range unspentTxn.OutputCoinsIndexAmount {
+			required -= outputCoinAmount
+			inputCoins = append(inputCoins, &transaction.InputCoin{
+				TxnID:           unspentTxn.ID,
+				OutputCoinIndex: outputCoinIndex,
+				FromPubKey:      tnxRequest.FromPubKey,
 			})
 
 			if required <= 0 {
@@ -173,7 +186,7 @@ bigLoop:
 		}
 	}
 
-	OutputCoins := []transaction.OutputCoin{
+	OutputCoins := []*transaction.OutputCoin{
 		{
 			Amount:   tnxRequest.Amount,
 			ToPubKey: tnxRequest.ToPubKey,
@@ -183,8 +196,9 @@ bigLoop:
 			ToPubKey: bc.MinerPubKey,
 		},
 	}
+
 	if required < 0 {
-		vout = append(vout, transaction.OutputCoin{
+		OutputCoins = append(OutputCoins, &transaction.OutputCoin{
 			Amount:   -required,
 			ToPubKey: tnxRequest.FromPubKey,
 		})
@@ -193,9 +207,9 @@ bigLoop:
 	txn := &transaction.Transaction{
 		ID:          tnxID,
 		Time:        tnxRequest.Time,
-		OutputCoins: vin,
-		InputCoins:  OutputCoins,
 		Sig:         tnxRequest.Signature,
+		InputCoins:  inputCoins,
+		OutputCoins: OutputCoins,
 	}
 
 	return txn, nil

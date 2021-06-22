@@ -10,7 +10,7 @@ import (
 import "bytes"
 
 type TransactionRequest struct {
-	Time       int64
+	Time       time.Time
 	FromPubKey []byte
 	ToPubKey   []byte
 	Signature  []byte
@@ -18,11 +18,11 @@ type TransactionRequest struct {
 }
 
 type Transaction struct {
-	Time        int64
+	Time        time.Time
 	ID          []byte
 	Sig         []byte
-	InputCoins  []InputCoin
-	OutputCoins []OutputCoin
+	InputCoins  []*InputCoin
+	OutputCoins []*OutputCoin
 }
 
 type OutputCoin struct {
@@ -31,16 +31,21 @@ type OutputCoin struct {
 }
 
 type InputCoin struct {
-	TXID                   []byte
-	OutputTransactionIndex int
-	FromPubKey             []byte
+	TxnID           []byte
+	OutputCoinIndex int
+	FromPubKey      []byte
+}
+
+type UnspentTransaction struct {
+	ID                     []byte
+	OutputCoinsIndexAmount map[int]int
 }
 
 func (txn *Transaction) IsCoinBase() bool {
 	return len(txn.OutputCoins) == 1 &&
 		len(txn.InputCoins) == 1 &&
-		txn.InputCoins[0].OutputTransactionIndex == -1 &&
-		len(txn.InputCoins[0].TXID) == 0
+		txn.InputCoins[0].OutputCoinIndex == -1 &&
+		len(txn.InputCoins[0].TxnID) == 0
 }
 
 func (txo *OutputCoin) OwnedBy(key []byte) bool {
@@ -53,8 +58,8 @@ func (txi *InputCoin) OwnedBy(key []byte) bool {
 
 func NewCoinBaseTxn(toPubKey []byte) *Transaction {
 	txi := InputCoin{
-		TXID:                   []byte{},
-		OutputTransactionIndex: -1,
+		TxnID:           []byte{},
+		OutputCoinIndex: -1,
 	}
 
 	txo := OutputCoin{
@@ -62,11 +67,11 @@ func NewCoinBaseTxn(toPubKey []byte) *Transaction {
 		ToPubKey: toPubKey,
 	}
 	txn := &Transaction{
-		InputCoins:  []InputCoin{txi},
-		OutputCoins: []OutputCoin{txo},
+		InputCoins:  []*InputCoin{&txi},
+		OutputCoins: []*OutputCoin{&txo},
 	}
 	txn.ID = ExtractTxnID(&TransactionRequest{
-		Time:       time.Now().UnixNano(),
+		Time:       time.Now(),
 		FromPubKey: nil,
 		ToPubKey:   toPubKey,
 		Signature:  nil,
