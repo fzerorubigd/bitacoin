@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"context"
 	"encoding/hex"
 	"github.com/fzerorubigd/bitacoin/block"
 	"github.com/fzerorubigd/bitacoin/hasher"
@@ -14,7 +15,7 @@ func TestBlockCreation(t *testing.T) {
 	mask := hasher.GenerateMask(2)
 	prev := hasher.EasyHash("Prev hash")
 
-	b := block.Mine(data, mask, prev)
+	b := block.StartMining(context.Background(), data, mask, prev)
 	if err := b.Validate(mask); err != nil {
 		t.Errorf("Validation failed: %q", err)
 		return
@@ -49,7 +50,7 @@ func TestBlockCreation(t *testing.T) {
 	b.PrevHash = prev
 
 	hash := b.Hash
-	b.Hash, _ = hasher.DifficultHash(mask, "Something else")
+	b.Hash, _ = hasher.DifficultHash(context.Background(), mask, "Something else")
 	if err := b.Validate(mask); err == nil {
 		t.Errorf("Block should be invalid, but is not")
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/helper"
@@ -48,15 +49,21 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	memPool = append(memPool, txn)
-	if len(memPool) >= blockchain.LoadedBlockChain.TransactionCount {
+	if len(memPool) >= blockchain.LoadedBlockChain.TransactionCount && blockchain.LoadedBlockChain.CancelMining == nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		blockchain.LoadedBlockChain.CancelMining = cancel
+
+		transactions := memPool[:blockchain.LoadedBlockChain.TransactionCount]
+		memPool = memPool[blockchain.LoadedBlockChain.TransactionCount:]
 		go func() {
-			newBlock, err := blockchain.LoadedBlockChain.MineNewBlock(txn)
+			newBlock, err := blockchain.LoadedBlockChain.StartMining(ctx, transactions...)
 			if err != nil {
-				log.Printf("MineNewBlock err: %s\n", err.Error())
+				log.Printf("StartMining err: %s\n", err.Error())
 			} else {
 				log.Printf("mined new block successfully.\nlast hash: %x\nprevious hash: %x\n",
 					newBlock.Hash, newBlock.PrevHash)
 			}
+			blockchain.LoadedBlockChain.CancelMining = nil
 		}()
 		memPool = nil
 	}

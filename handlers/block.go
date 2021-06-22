@@ -23,7 +23,7 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 	newBlock := block.Block{}
 	err = json.Unmarshal(byteBody, &newBlock)
 	if err != nil {
-		log.Printf("block unmarshal err: %s\n", err.Error())
+		log.Printf("block unmarshal, err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "Bad Request",
 		})
@@ -32,15 +32,18 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = newBlock.Validate(blockchain.LoadedBlockChain.Mask)
 	if err != nil {
+		log.Printf("recieved invalid block, err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "Invalid Block",
 		})
 		return
 	}
 
+	blockchain.LoadedBlockChain.CancelMining()
+
 	err = blockchain.LoadedBlockChain.AppendBlock(&newBlock)
 	if err != nil {
-		log.Printf("append new block err: %s\n", err.Error())
+		log.Printf("append new block, err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})

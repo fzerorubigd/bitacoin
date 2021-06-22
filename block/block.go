@@ -2,6 +2,7 @@ package block
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/hasher"
 	"github.com/fzerorubigd/bitacoin/transaction"
@@ -14,7 +15,7 @@ type Block struct {
 	Timestamp    time.Time
 	Transactions []*transaction.Transaction
 
-	Nonce    int32
+	Nonce    uint64
 	PrevHash []byte
 	Hash     []byte
 }
@@ -41,15 +42,20 @@ func (b *Block) Validate(mask []byte) error {
 	return nil
 }
 
-// Mine creates a new block in the system, it needs difficulty mask for
+// StartMining creates a new block in the system, it needs difficulty mask for
 // create a good hash, and also the previous block hash
-func Mine(txns []*transaction.Transaction, mask, prevHash []byte) *Block {
+func StartMining(ctx context.Context, txns []*transaction.Transaction, mask, prevHash []byte) *Block {
 	b := Block{
 		Timestamp:    time.Now(),
 		Transactions: txns,
 		PrevHash:     prevHash,
 	}
-	b.Hash, b.Nonce = hasher.DifficultHash(mask, b.Timestamp.UnixNano(), transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash)
+	b.Hash, b.Nonce = hasher.DifficultHash(ctx, mask, b.Timestamp.UnixNano(),
+		transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash)
+
+	if b.Hash == nil {
+		return nil
+	}
 
 	return &b
 }

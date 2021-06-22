@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,12 +20,12 @@ type BlockChain struct {
 	Difficulty       int
 	Mask             []byte
 	TransactionCount int
-
+	CancelMining     context.CancelFunc
 	storege.Store
 }
 
-// MineNewBlock a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) MineNewBlock(data ...*transaction.Transaction) (*block.Block, error) {
+// StartMining a new data to the end of the block chain by creating a new block
+func (bc *BlockChain) StartMining(ctx context.Context, data ...*transaction.Transaction) (*block.Block, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("no data to add")
 	}
@@ -33,7 +34,7 @@ func (bc *BlockChain) MineNewBlock(data ...*transaction.Transaction) (*block.Blo
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
 
-	b := block.Mine(data, bc.Mask, hash)
+	b := block.StartMining(ctx, data, bc.Mask, hash)
 	err = interactor.Shout(b)
 	if err != nil {
 		return nil, err
@@ -206,9 +207,9 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 		return nil, fmt.Errorf("store already initialized")
 	}
 	gbTxn := transaction.NewCoinBaseTxn(genesis)
-	gb := block.Mine([]*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
+	gb := block.StartMining(context.Background(), []*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.AppendBlock(gb); err != nil {
-		return nil, fmt.Errorf("MineNewBlock Genesis block to store failed: %w", err)
+		return nil, fmt.Errorf("StartMining Genesis block to store failed: %w", err)
 	}
 
 	return &bc, nil
