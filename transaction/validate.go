@@ -6,22 +6,22 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
+	"time"
 )
 
-func VerifySig(tnxRequest *TransactionRequest) error {
-	publicKey, err := x509.ParsePKCS1PublicKey(tnxRequest.FromPubKey)
+func VerifySig(time time.Time, fromPubKey, toPubKey []byte, amount int, sig []byte) error {
+	publicKey, err := x509.ParsePKCS1PublicKey(fromPubKey)
 	if err != nil {
 		return fmt.Errorf("parsing public key err: %s", err.Error())
 	}
 
 	hasher := sha256.New()
-	_, err = fmt.Fprint(hasher, tnxRequest.Time, tnxRequest.FromPubKey,
-		tnxRequest.ToPubKey, tnxRequest.FromPubKey, tnxRequest.Amount)
+	_, err = fmt.Fprint(hasher, time, fromPubKey, toPubKey, amount)
 	if err != nil {
 		return fmt.Errorf("writing hash error in VerifySig err: %s", err.Error())
 	}
 
-	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hasher.Sum(nil), tnxRequest.Signature)
+	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hasher.Sum(nil), sig)
 	if err != nil {
 		return err
 	}
@@ -31,6 +31,3 @@ func VerifySig(tnxRequest *TransactionRequest) error {
 
 // TODO:
 // 1.Does owner really had that money?
-// 2.Is the TNX id ok?
-// 3.There should be only one coinbase transaction in block.
-// 4.only one transaction free for each transaction

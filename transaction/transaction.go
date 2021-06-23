@@ -26,19 +26,14 @@ type Transaction struct {
 }
 
 type OutputCoin struct {
-	Amount   int
-	ToPubKey []byte
+	Amount int
+	PubKey []byte
 }
 
 type InputCoin struct {
 	TxnID           []byte
 	OutputCoinIndex int
-	FromPubKey      []byte
-}
-
-type UnspentTransaction struct {
-	ID                     []byte
-	OutputCoinsIndexAmount map[int]int
+	PubKey          []byte
 }
 
 func (txn *Transaction) IsCoinBase() bool {
@@ -49,11 +44,11 @@ func (txn *Transaction) IsCoinBase() bool {
 }
 
 func (txo *OutputCoin) OwnedBy(key []byte) bool {
-	return bytes.Equal(txo.ToPubKey, key)
+	return bytes.Equal(txo.PubKey, key)
 }
 
 func (txi *InputCoin) OwnedBy(key []byte) bool {
-	return bytes.Equal(txi.FromPubKey, key)
+	return bytes.Equal(txi.PubKey, key)
 }
 
 func NewCoinBaseTxn(toPubKey []byte) *Transaction {
@@ -63,20 +58,14 @@ func NewCoinBaseTxn(toPubKey []byte) *Transaction {
 	}
 
 	txo := OutputCoin{
-		Amount:   repository.CoinbaseReward,
-		ToPubKey: toPubKey,
+		Amount: repository.CoinbaseReward,
+		PubKey: toPubKey,
 	}
 	txn := &Transaction{
 		InputCoins:  []*InputCoin{&txi},
 		OutputCoins: []*OutputCoin{&txo},
 	}
-	txn.ID = ExtractTxnID(&TransactionRequest{
-		Time:       time.Now(),
-		FromPubKey: nil,
-		ToPubKey:   toPubKey,
-		Signature:  nil,
-		Amount:     repository.CoinbaseReward,
-	})
+	txn.ID = ExtractTxnID(nil, time.Now())
 	return txn
 }
 
@@ -89,9 +78,8 @@ func CalculateTxnsHash(txns ...*Transaction) []byte {
 	return hasher.EasyHash(data...)
 }
 
-func ExtractTxnID(tnxRequest *TransactionRequest) []byte {
-	timeString := fmt.Sprint(tnxRequest.Time)
-	buf := bytes.NewBuffer(make([]byte, len(tnxRequest.Signature)+len(timeString)))
-	_, _ = fmt.Fprint(buf, tnxRequest.Signature, timeString)
+func ExtractTxnID(sin []byte, time time.Time) []byte {
+	buf := bytes.NewBuffer(make([]byte, len(sin)+len(time.String())))
+	_, _ = fmt.Fprint(buf, sin, time)
 	return buf.Bytes()
 }

@@ -39,6 +39,15 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = blockchain.LoadedBlockChain.ValidateIncomingTransactions(newBlock.Transactions)
+	if err != nil {
+		log.Printf("recieved valid block but with invalid transactions, err: %s\n", err.Error())
+		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid Transactions",
+		})
+		return
+	}
+
 	blockchain.LoadedBlockChain.CancelMining()
 
 	err = blockchain.LoadedBlockChain.AppendBlock(&newBlock)
