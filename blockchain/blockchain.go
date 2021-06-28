@@ -163,6 +163,9 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 		for _, txn := range b.Transactions {
 			for outputCoinIndex, OutputCoin := range txn.OutputCoins {
 				if OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent) {
+					if _, ok := unspent[hex.EncodeToString(txn.ID)]; !ok {
+						unspent[hex.EncodeToString(txn.ID)] = make(map[int]*transaction.OutputCoin)
+					}
 					unspent[hex.EncodeToString(txn.ID)][outputCoinIndex] = OutputCoin
 					balance += OutputCoin.Amount
 				}
@@ -274,7 +277,7 @@ bigLoop:
 
 // NewBlockChain creates a new block chain with a difficulty, difficulty in this
 // block chain is the number of zeros in the beginning of the generated hash
-func NewBlockChain(genesis []byte, difficulty, transactionCount int, store storege.Store) (*BlockChain, error) {
+func NewBlockChain(pubKey []byte, difficulty, transactionCount int, store storege.Store) (*BlockChain, error) {
 	mask := hasher.GenerateMask(difficulty)
 	bc := BlockChain{
 		Difficulty:       difficulty,
@@ -287,7 +290,11 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 	if !errors.Is(err, storege.ErrNotInitialized) {
 		return nil, fmt.Errorf("store already initialized")
 	}
-	gbTxn := transaction.NewRewardTxn(genesis)
+
+	gbTxn := transaction.NewRewardTxn(pubKey)
+	gbTxn.Sig = []byte("Today is same tomorrow that was supposed to be better than yesterday.")
+	gbTxn.ID = transaction.CalculateTxnID(gbTxn.Sig, gbTxn.Time)
+
 	gb := block.StartMining(context.Background(), []*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.AppendBlock(gb); err != nil {
 		return nil, fmt.Errorf("StartMining Genesis block to store failed: %w", err)
