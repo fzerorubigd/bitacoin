@@ -51,7 +51,7 @@ func (txi *InputCoin) OwnedBy(key []byte) bool {
 	return bytes.Equal(txi.PubKey, key)
 }
 
-func NewCoinBaseTxn(toPubKey []byte) *Transaction {
+func NewRewardTxn(toPubKey []byte) *Transaction {
 	txi := InputCoin{
 		TxnID:           []byte{},
 		OutputCoinIndex: -1,

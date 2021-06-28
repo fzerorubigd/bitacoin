@@ -37,9 +37,9 @@ func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transact
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
 
-	coinbaseTnx := transaction.NewCoinBaseTxn(bc.MinerPubKey)
+	rewardTnx := transaction.NewRewardTxn(bc.MinerPubKey)
 	transactionsPlusCoinbase := make([]*transaction.Transaction, len(transactions)+1)
-	transactionsPlusCoinbase[0] = coinbaseTnx
+	transactionsPlusCoinbase[0] = rewardTnx
 	transactionsPlusCoinbase = append(transactionsPlusCoinbase, transactions...)
 
 	b := block.StartMining(ctx, transactionsPlusCoinbase, bc.Mask, hash)
@@ -287,7 +287,7 @@ func NewBlockChain(genesis []byte, difficulty, transactionCount int, store store
 	if !errors.Is(err, storege.ErrNotInitialized) {
 		return nil, fmt.Errorf("store already initialized")
 	}
-	gbTxn := transaction.NewCoinBaseTxn(genesis)
+	gbTxn := transaction.NewRewardTxn(genesis)
 	gb := block.StartMining(context.Background(), []*transaction.Transaction{gbTxn}, bc.Mask, []byte{})
 	if err := store.AppendBlock(gb); err != nil {
 		return nil, fmt.Errorf("StartMining Genesis block to store failed: %w", err)

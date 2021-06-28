@@ -11,7 +11,7 @@ import (
 )
 
 func TestBlockCreation(t *testing.T) {
-	data := []*transaction.Transaction{transaction.NewCoinBaseTxn([]byte("bita"))}
+	data := []*transaction.Transaction{transaction.NewRewardTxn([]byte("bita"))}
 	mask := hasher.GenerateMask(2)
 	prev := hasher.EasyHash("Prev hash")
 
@@ -37,7 +37,7 @@ func TestBlockCreation(t *testing.T) {
 	}
 	b.Nonce--
 
-	b.Transactions = []*transaction.Transaction{transaction.NewCoinBaseTxn([]byte("forud"))}
+	b.Transactions = []*transaction.Transaction{transaction.NewRewardTxn([]byte("forud"))}
 	if err := b.Validate(mask); err == nil {
 		t.Errorf("Block should be invalid, but is not")
 	}

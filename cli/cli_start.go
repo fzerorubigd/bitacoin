@@ -40,6 +40,7 @@ func start(store storege.Store, args ...string) error {
 	http.HandleFunc(repository.TransactionUrl, handlers.TransactionHandler)
 	http.HandleFunc(repository.ExploreUrl, handlers.ExploreHandler)
 	http.HandleFunc(repository.BlockUrl, handlers.BlockHandler)
+	http.HandleFunc(repository.BalanceUrl, handlers.BalanceHandler)
 
 	fileServer := http.FileServer(http.Dir(store.DataPath()))
 	http.Handle(repository.DataServeUrl, http.StripPrefix(repository.DataServeUrl, fileServer))
