@@ -3,6 +3,7 @@ package helper
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,31 +21,46 @@ func WriteResponse(w http.ResponseWriter, code int, customResponse interface{}) 
 	}
 }
 
-func SendRequest(method, url string, body interface{}) ([]byte, int, error) {
-	requestBody := &bytes.Buffer{}
-	if body != nil {
-		byteBody, err := json.Marshal(body)
+func SendReqAndUnmarshalResp(method, url string, reqBody interface{}, expectedStatusCode int, respStruct interface{}) error {
+	var (
+		err         error
+		jsonReqBody []byte
+	)
+
+	if reqBody != nil {
+		jsonReqBody, err = json.Marshal(reqBody)
 		if err != nil {
-			return nil, -1, err
+			return err
 		}
-		requestBody.Write(byteBody)
 	}
 
-	request, err := http.NewRequest(method, url, requestBody)
+	buf := bytes.NewBuffer(jsonReqBody)
+	request, err := http.NewRequest(method, url, buf)
 	if err != nil {
-		return nil, -1, err
+		return err
 	}
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return nil, -1, err
-
+		return err
 	}
 
-	byteResp, err := ioutil.ReadAll(response.Body)
+	respBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, -1, err
+		return err
 	}
 
-	return byteResp, response.StatusCode, nil
+	if response.StatusCode != expectedStatusCode {
+		return fmt.Errorf("recienve bad status code, recived %d but expcted %d, url: %s, respbody: %s",
+			response.StatusCode, expectedStatusCode, url, respBody)
+	}
+
+	if respStruct != nil {
+		err = json.Unmarshal(respBody, &respStruct)
+		if err != nil {
+			return fmt.Errorf("unmarshal response err: %s, respBody: %s", err.Error(), reqBody)
+		}
+	}
+
+	return nil
 }

@@ -1,7 +1,6 @@
 package downloader
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/fzerorubigd/bitacoin/block"
 	"github.com/fzerorubigd/bitacoin/helper"
@@ -61,19 +60,16 @@ Finished:
 }
 
 func downloadBlock(url string) (*block.Block, error) {
-	byteResp, statusCode, err := helper.SendRequest("GET", url, nil)
+	newBlock := &block.Block{}
+	err := helper.SendReqAndUnmarshalResp(
+		http.MethodGet,
+		url,
+		nil,
+		http.StatusOK,
+		newBlock,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("donwload block err: %w", err.Error())
-	}
-	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("donwload block recieved status code %d instead 200, url: %s, recienved response body: %s",
-			statusCode, url, byteResp)
-	}
-
-	newBlock := &block.Block{}
-	err = json.Unmarshal(byteResp, newBlock)
-	if err != nil {
-		return nil, err
 	}
 
 	return newBlock, nil
@@ -93,25 +89,22 @@ func getLastHashFromOtherNodes(nodes map[string]struct{}) []byte {
 }
 
 func getLastHash(url string) ([]byte, error) {
-	byteResp, statusCode, err := helper.SendRequest("GET", url, nil)
+	respMap := make(map[string][]byte)
+	err := helper.SendReqAndUnmarshalResp(
+		http.MethodGet,
+		url,
+		nil,
+		http.StatusOK,
+		&respMap,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("get lastHash err: %w", err.Error())
 	}
-	if statusCode != http.StatusOK {
-		return nil, fmt.Errorf("get lastHash recieved response status code %d instead 200, url: %s, recienved response body: %s",
-			statusCode, url, byteResp)
+
+	if respMap["lastHash"] == nil {
+		return nil, fmt.Errorf(`recived bad response from node %s, err: there is no lastBlock in response body,
+recieved response: %+v`, url, respMap)
 	}
 
-	respMap := make(map[string][]byte)
-	err = json.Unmarshal(byteResp, &respMap)
-	if err != nil {
-		return nil, fmt.Errorf("get lastHash unmarshal response body err: %w", err.Error())
-	}
-
-	if respMap["lastHash"] != nil {
-		return respMap["lastHash"], nil
-	}
-
-	return nil, fmt.Errorf(`recived bad response from node %s, err: there is no lastBlock in response body,
-recieved response: %s`, url, byteResp)
+	return respMap["lastHash"], nil
 }
