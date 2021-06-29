@@ -5,5 +5,5 @@
     "http://127.0.0.1:7071",
     "http://127.0.0.1:7072"
   ],
-  "MinterPubKey": ""
+  "PubKeyPath": "./wallet"
 }

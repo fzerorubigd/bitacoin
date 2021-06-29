@@ -6,17 +6,16 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
-	"time"
 )
 
-func VerifySig(time time.Time, fromPubKey, toPubKey []byte, amount int, sig []byte) error {
-	publicKey, err := x509.ParsePKCS1PublicKey(fromPubKey)
+func VerifySig(time int64, pubKey, toPubKey []byte, amount int, sig []byte) error {
+	publicKey, err := x509.ParsePKCS1PublicKey(pubKey)
 	if err != nil {
 		return fmt.Errorf("parsing public key err: %s", err.Error())
 	}
 
 	hasher := sha256.New()
-	_, err = fmt.Fprint(hasher, time, fromPubKey, toPubKey, amount)
+	_, err = fmt.Fprint(hasher, time, pubKey, toPubKey, amount)
 	if err != nil {
 		return fmt.Errorf("writing hash error in VerifySig err: %s", err.Error())
 	}
@@ -28,6 +27,3 @@ func VerifySig(time time.Time, fromPubKey, toPubKey []byte, amount int, sig []by
 
 	return nil
 }
-
-// TODO:
-// 1.Does owner really had that money?

@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"fmt"
 	"github.com/fzerorubigd/bitacoin/hasher"
 	"github.com/fzerorubigd/bitacoin/repository"
 	"time"
@@ -10,7 +9,7 @@ import (
 import "bytes"
 
 type TransactionRequest struct {
-	Time       time.Time
+	Time       int64
 	FromPubKey []byte
 	ToPubKey   []byte
 	Signature  []byte
@@ -18,7 +17,7 @@ type TransactionRequest struct {
 }
 
 type Transaction struct {
-	Time        time.Time
+	Time        int64
 	ID          []byte
 	Sig         []byte
 	InputCoins  []*InputCoin
@@ -61,11 +60,14 @@ func NewRewardTxn(toPubKey []byte) *Transaction {
 		Amount: repository.CoinbaseReward,
 		PubKey: toPubKey,
 	}
+
+	t := time.Now().UnixNano()
 	txn := &Transaction{
+		Time:        t,
 		InputCoins:  []*InputCoin{&txi},
 		OutputCoins: []*OutputCoin{&txo},
 	}
-	txn.ID = ExtractTxnID(nil, time.Now())
+	txn.ID = CalculateTxnID(nil, t)
 	return txn
 }
 
@@ -78,8 +80,6 @@ func CalculateTxnsHash(txns ...*Transaction) []byte {
 	return hasher.EasyHash(data...)
 }
 
-func ExtractTxnID(sin []byte, time time.Time) []byte {
-	buf := bytes.NewBuffer(make([]byte, len(sin)+len(time.String())))
-	_, _ = fmt.Fprint(buf, sin, time)
-	return buf.Bytes()
+func CalculateTxnID(sin []byte, time int64) []byte {
+	return hasher.EasyHash(sin, time)
 }

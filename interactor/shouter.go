@@ -10,6 +10,8 @@ import (
 )
 
 func Shout(block *block.Block) error {
+	log.Println("shouting started")
+
 	acceptCount := 0
 	rejectCount := 0
 
@@ -23,7 +25,7 @@ func Shout(block *block.Block) error {
 			&shoutResp,
 		)
 		if err != nil {
-			log.Printf("an error happend shouting: %s\n", err.Error())
+			log.Printf("an error happend while shouting: %s\n", err.Error())
 			rejectCount++
 			continue
 		}

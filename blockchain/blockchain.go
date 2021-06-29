@@ -13,6 +13,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/repository"
 	"github.com/fzerorubigd/bitacoin/storege"
 	"github.com/fzerorubigd/bitacoin/transaction"
+	"log"
 )
 
 var LoadedBlockChain *BlockChain
@@ -29,6 +30,8 @@ type BlockChain struct {
 
 // StartMining a new data to the end of the block chain by creating a new block
 func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transaction.Transaction) (*block.Block, error) {
+	log.Println("mining new block has been started")
+
 	if len(transactions) == 0 {
 		return nil, fmt.Errorf("no transactions to add")
 	}
@@ -38,11 +41,15 @@ func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transact
 	}
 
 	rewardTnx := transaction.NewRewardTxn(bc.MinerPubKey)
-	transactionsPlusCoinbase := make([]*transaction.Transaction, len(transactions)+1)
-	transactionsPlusCoinbase[0] = rewardTnx
-	transactionsPlusCoinbase = append(transactionsPlusCoinbase, transactions...)
+	txnsPlusReward := make([]*transaction.Transaction, len(transactions)+1)
+	txnsPlusReward[0] = rewardTnx
+	for i, txn := range transactions {
+		txnsPlusReward[i+1] = txn
+	}
 
-	b := block.StartMining(ctx, transactionsPlusCoinbase, bc.Mask, hash)
+	b := block.StartMining(ctx, txnsPlusReward, bc.Mask, hash)
+	log.Println("new block mined successfully")
+
 	err = interactor.Shout(b)
 	if err != nil {
 		return nil, err
@@ -96,58 +103,69 @@ func (bc *BlockChain) ValidateIncomingTransactions(transactions []*transaction.T
 	rewardCoinCount := 0
 	for index, txn := range transactions[1:] {
 		if len(txn.InputCoins) < 1 || len(txn.OutputCoins) < 1 {
-			return fmt.Errorf("transaction needs at least one inputCoin and one outputCoin, txn index: %d", index)
+			return fmt.Errorf("transaction needs at least one inputCoin and one outputCoin, transaction index: %d", index)
 		}
 
 		if len(txn.OutputCoins) > 1 {
-			if txn.OutputCoins[len(txn.OutputCoins)-1].Amount != repository.TransactionFree {
-				return fmt.Errorf("transaction fee is %d, it must be %d, txn index: %d",
+			if txn.OutputCoins[1].Amount != repository.TransactionFree {
+				return fmt.Errorf("transaction fee is %d, it must be %d, transactions index: %d",
 					txn.OutputCoins[1].Amount, repository.TransactionFree, index)
 			}
 		}
 
-		txnID := transaction.ExtractTxnID(txn.Sig, txn.Time)
+		txnID := transaction.CalculateTxnID(txn.Sig, txn.Time)
 		if !bytes.Equal(txnID, txn.ID) {
-			return fmt.Errorf("transaction id is wrong, txn index: %d", index)
+			return fmt.Errorf("transaction id is wrong, transaction index: %d", index)
 		}
 
 		if txn.IsCoinBase() {
 			rewardCoinCount++
 			if rewardCoinCount > 1 {
-				return fmt.Errorf("there has to be only one reward transaction in a block, txn index: %d", index)
+				return fmt.Errorf("there has to be only one reward transaction in a block, transaction index: %d", index)
 			}
 		} else if len(txn.OutputCoins) < 2 {
-			return fmt.Errorf("there is no transaction fee, txn index: %d", index)
+			return fmt.Errorf("there is no transaction fee, transaction index: %d", index)
 		} else {
 			fromPubKey := txn.InputCoins[0].PubKey
 			err := transaction.VerifySig(txn.Time, fromPubKey,
 				txn.OutputCoins[0].PubKey, txn.OutputCoins[0].Amount, txn.Sig)
 			if err != nil {
-				return fmt.Errorf("verify siniture err: %s, txn index: %d", err.Error(), index)
+				return fmt.Errorf("verify siniture err: %s, transaction index: %d", err.Error(), index)
 			}
 
 			unspentTxns, balance, err := bc.UnspentTxn(txn.InputCoins[0].PubKey)
 			if err != nil {
-				return fmt.Errorf("balance err: %s, txn index: %d", err.Error(), index)
+				return fmt.Errorf("balance err: %s, transaction index: %d", err.Error(), index)
 			}
 
 			if balance < txn.OutputCoins[0].Amount {
-				return fmt.Errorf("balance is lower than amount, txn index: %d", index)
+				return fmt.Errorf("balance is lower than amount, transaction index: %d", index)
 			}
 
-			if balance > txn.OutputCoins[0].Amount && (len(txn.OutputCoins) != 3 ||
-				txn.OutputCoins[2].Amount != balance-txn.OutputCoins[0].Amount || !txn.OutputCoins[2].OwnedBy(fromPubKey)) {
-				return fmt.Errorf("rest balance in outputCoin is wrong, txn index: %d", index)
+			if len(txn.OutputCoins) != 3 && balance > txn.OutputCoins[0].Amount {
+				return fmt.Errorf("rest balance coin doesn't exist in outputCoin, transaction index: %d", index)
 			}
 
-			strTxnID := hex.EncodeToString(txnID)
+			inputTotalAmount := 0
 			for _, inputCoin := range txn.InputCoins {
 				if !inputCoin.OwnedBy(fromPubKey) {
-					return fmt.Errorf("spent someone else coin, wrong inputCoin, txn index: %d", index)
+					return fmt.Errorf("spent someone else coin, wrong inputCoin, transaction index: %d", index)
 				}
-				if !unspentTxns[strTxnID][inputCoin.OutputCoinIndex].OwnedBy(fromPubKey) {
-					return fmt.Errorf("spent someone else coin, wrong outputCoin, txn index: %d", index)
+				outputCoin := unspentTxns[hex.EncodeToString(inputCoin.TxnID)][inputCoin.OutputCoinIndex]
+				if !outputCoin.OwnedBy(fromPubKey) {
+					return fmt.Errorf("spent someone else coin, wrong outputCoin, transaction index: %d", index)
 				}
+				inputTotalAmount += unspentTxns[hex.EncodeToString(inputCoin.TxnID)][inputCoin.OutputCoinIndex].Amount
+			}
+
+			restBalance := inputTotalAmount - (txn.OutputCoins[0].Amount + txn.OutputCoins[1].Amount)
+			if txn.OutputCoins[2].Amount != restBalance {
+				return fmt.Errorf("rest balance coin has wrong amout, expected %d but recieved: %d, transaction index: %d",
+					restBalance, txn.OutputCoins[2].Amount, index)
+			}
+
+			if txn.OutputCoins[2] == nil || !txn.OutputCoins[2].OwnedBy(fromPubKey) {
+				return fmt.Errorf("rest balance coin has wrong pubKey, transaction index: %d", index)
 			}
 		}
 	}
@@ -156,22 +174,23 @@ func (bc *BlockChain) ValidateIncomingTransactions(transactions []*transaction.T
 }
 
 func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction.OutputCoin, int, error) {
-	spent := []int{}
+	spent := make(map[string][]int)
 	unspent := make(map[string]map[int]*transaction.OutputCoin)
 	balance := 0
 	err := storege.Iterate(bc.Store, func(b *block.Block) error {
 		for _, txn := range b.Transactions {
+			txnID := hex.EncodeToString(txn.ID)
 			for outputCoinIndex, OutputCoin := range txn.OutputCoins {
-				if OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent) {
-					if _, ok := unspent[hex.EncodeToString(txn.ID)]; !ok {
-						unspent[hex.EncodeToString(txn.ID)] = make(map[int]*transaction.OutputCoin)
+				if OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent[txnID]) {
+					if _, ok := unspent[txnID]; !ok {
+						unspent[txnID] = make(map[int]*transaction.OutputCoin)
 					}
-					unspent[hex.EncodeToString(txn.ID)][outputCoinIndex] = OutputCoin
+					unspent[txnID][outputCoinIndex] = OutputCoin
 					balance += OutputCoin.Amount
 				}
 			}
 
-			spent = spent[:]
+			delete(spent, txnID)
 
 			if txn.IsCoinBase() {
 				continue
@@ -179,7 +198,7 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 
 			for _, inputCoin := range txn.InputCoins {
 				if inputCoin.OwnedBy(pubKey) {
-					spent = append(spent, inputCoin.OutputCoinIndex)
+					spent[hex.EncodeToString(inputCoin.TxnID)] = append(spent[hex.EncodeToString(inputCoin.TxnID)], inputCoin.OutputCoinIndex)
 				}
 			}
 		}
@@ -195,14 +214,14 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 
 func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest) (*transaction.Transaction, error) {
 	lastFourthBlocks := bc.LastFourthBlocks()
-	if lastFourthBlocks[len(lastFourthBlocks)-1].Timestamp.After(tnxRequest.Time) {
+	if len(lastFourthBlocks) == 4 && lastFourthBlocks[3] != nil && lastFourthBlocks[3].Time > tnxRequest.Time {
 		return nil, fmt.Errorf("transaction is expired")
 	}
 
-	tnxID := transaction.ExtractTxnID(tnxRequest.Signature, tnxRequest.Time)
+	tnxID := transaction.CalculateTxnID(tnxRequest.Signature, tnxRequest.Time)
 
 	for _, oldBlock := range lastFourthBlocks {
-		if oldBlock.Contains(tnxID) {
+		if oldBlock != nil && oldBlock.Contains(tnxID) {
 			return nil, fmt.Errorf("transaction already exist in the blockchain")
 		}
 	}
@@ -224,7 +243,7 @@ func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest)
 
 	required := tnxRequest.Amount + repository.TransactionFree
 	if balance < required {
-		return nil, fmt.Errorf("not enough money, want %d have %d", required, balance)
+		return nil, fmt.Errorf("not enough balance, want %d have %d", required, balance)
 	}
 
 	inputCoins := []*transaction.InputCoin{}

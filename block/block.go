@@ -12,25 +12,24 @@ import (
 // Block is the core data for the block chain. it can contain anything,
 // a block is like a record in a table in database
 type Block struct {
-	Timestamp    time.Time
+	Time         int64
 	Transactions []*transaction.Transaction
-
-	Nonce    uint64
-	PrevHash []byte
-	Hash     []byte
+	Nonce        uint64
+	PrevHash     []byte
+	Hash         []byte
 }
 
 func (b *Block) String() string {
 	return fmt.Sprintf(
-		"Time: %s\nTxn Count: %d\nHash: %x\nPrevHash: %x\nNonce: %d\n----\n",
-		b.Timestamp, len(b.Transactions), b.Hash, b.PrevHash, b.Nonce,
+		"Time: %d\nTxn Count: %d\nHash: %x\nPrevHash: %x\nNonce: %d\n----\n",
+		b.Time, len(b.Transactions), b.Hash, b.PrevHash, b.Nonce,
 	)
 }
 
 // Validate try to validate the current block, it needs a difficulty mask
 // for validating the hash difficulty
 func (b *Block) Validate(mask []byte) error {
-	h := hasher.EasyHash(b.Timestamp.UnixNano(), transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash, b.Nonce)
+	h := hasher.EasyHash(b.Time, transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash, b.Nonce)
 	if !bytes.Equal(h, b.Hash) {
 		return fmt.Errorf("the hash is invalid it should be %x is %x", h, b.Hash)
 	}
@@ -56,14 +55,14 @@ func (b *Block) Contains(tnxID []byte) bool {
 // create a good hash, and also the previous block hash
 func StartMining(ctx context.Context, txns []*transaction.Transaction, mask, prevHash []byte) *Block {
 	b := Block{
-		Timestamp:    time.Now(),
+		Time:         time.Now().UnixNano(),
 		Transactions: txns,
 		PrevHash:     prevHash,
 	}
-	b.Hash, b.Nonce = hasher.DifficultHash(ctx, mask, b.Timestamp.UnixNano(),
+	b.Hash, b.Nonce = hasher.DifficultHash(ctx, mask, b.Time,
 		transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash)
 
-	if b.Hash == nil {
+	if len(b.Hash) == 0 {
 		return nil
 	}
 

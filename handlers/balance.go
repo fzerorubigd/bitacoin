@@ -31,7 +31,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pubKey := resp["pubKey"]
-	if pubKey == nil {
+	if len(pubKey) == 0 {
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"err": "there is no pubKey in request",
 		})

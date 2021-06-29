@@ -16,6 +16,21 @@ type folderStore struct {
 	lastFourthBlocks []*block.Block
 }
 
+func (fs *folderStore) loadLastFourthBlocks() error {
+	hash := fs.lastHash
+	fs.lastFourthBlocks = make([]*block.Block, 4)
+	for i := 0; i < 4 && len(hash) != 0; i++ {
+		b, err := fs.Load(hash)
+		if err != nil {
+			return err
+		}
+		fs.lastFourthBlocks[i] = b
+		hash = b.PrevHash
+	}
+
+	return nil
+}
+
 func (fs *folderStore) Load(hash []byte) (*block.Block, error) {
 	path := filepath.Join(fs.dataPath, fmt.Sprintf("%x.json", hash))
 	var b block.Block
@@ -42,14 +57,10 @@ func (fs *folderStore) AppendBlock(b *block.Block) error {
 		return fmt.Errorf("write configuration file failed: %w", err)
 	}
 
-	lastFourthBlocks := make([]*block.Block, len(fs.lastFourthBlocks))
-	lastFourthBlocks[0] = b
 	if len(fs.lastFourthBlocks) < 4 {
-		lastFourthBlocks = append(lastFourthBlocks, fs.lastFourthBlocks...)
-		fs.lastFourthBlocks = lastFourthBlocks
+		fs.lastFourthBlocks = append([]*block.Block{b}, fs.lastFourthBlocks...)
 	} else {
-		lastFourthBlocks = append(lastFourthBlocks, fs.lastFourthBlocks[:3]...)
-		fs.lastFourthBlocks = lastFourthBlocks
+		fs.lastFourthBlocks = append([]*block.Block{b}, fs.lastFourthBlocks[:3]...)
 	}
 
 	return nil
@@ -90,10 +101,14 @@ func NewFolderStore(storePath string) Store {
 	}
 	lastHashFile := make(map[string][]byte)
 	if err := helper.ReadJSON(filepath.Join(fs.dataPath, repository.LastHashFileName), &lastHashFile); err != nil {
-		log.Print("Empty store")
+		log.Println("there is no block in the store")
 		fs.lastHash = nil
-	} else if lastHashFile["lastHash"] != nil {
+	} else if len(lastHashFile["lastHash"]) != 0 {
 		fs.lastHash = lastHashFile["lastHash"]
+		err = fs.loadLastFourthBlocks()
+		if err != nil {
+			log.Fatalf("loadLastFourthBlocks err: %s\n", err.Error())
+		}
 	}
 
 	return fs

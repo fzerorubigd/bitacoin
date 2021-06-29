@@ -11,6 +11,8 @@ import (
 )
 
 func BlockHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("received new block from an other node")
+
 	byteBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("bad new block request err: %s\n", err.Error())
@@ -38,6 +40,7 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	log.Println("block nonce is valid")
 
 	err = blockchain.LoadedBlockChain.ValidateIncomingTransactions(newBlock.Transactions)
 	if err != nil {
@@ -47,8 +50,12 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	log.Println("block transactions are valid")
 
-	blockchain.LoadedBlockChain.CancelMining()
+	if blockchain.LoadedBlockChain.CancelMining != nil {
+		blockchain.LoadedBlockChain.CancelMining()
+		log.Println("mining canceled")
+	}
 
 	err = blockchain.LoadedBlockChain.AppendBlock(&newBlock)
 	if err != nil {
@@ -59,9 +66,8 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("new block Accepted: %+v\n", newBlock)
+	log.Printf("new block Accepted:\n%s\n", newBlock.String())
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "new block appended successfully",
-		"block":   newBlock,
 	})
 }

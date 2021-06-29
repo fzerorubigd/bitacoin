@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/fzerorubigd/bitacoin/helper"
 	"github.com/fzerorubigd/bitacoin/interactor"
 	"net/http"
@@ -22,5 +23,5 @@ func ExploreHandler(w http.ResponseWriter, r *http.Request) {
 	helper.WriteResponse(w, http.StatusOK, response)
 
 	ip := strings.Split(r.RemoteAddr, ":")[0]
-	interactor.Explorer.AddNewNode(ip + ":" + port)
+	interactor.Explorer.AddNewNode(fmt.Sprintf("http://%s:%s", ip, port))
 }

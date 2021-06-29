@@ -42,7 +42,7 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("new tnxRequest in memPool: %+v\n", tnxRequest)
+	log.Println("new tnxRequest in memPool")
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
 		"message":    "tnxRequest appended to memPool successfully",
 		"tnxRequest": tnxRequest,
@@ -60,8 +60,7 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Printf("StartMining err: %s\n", err.Error())
 			} else {
-				log.Printf("mined new block successfully.\nlast hash: %x\nprevious hash: %x\n",
-					newBlock.Hash, newBlock.PrevHash)
+				log.Printf("new block added to the blockchain successfully.\n%s\n", newBlock.String())
 			}
 			blockchain.LoadedBlockChain.CancelMining = nil
 		}()

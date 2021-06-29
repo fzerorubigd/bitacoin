@@ -1,6 +1,8 @@
 package repository
 
 const (
-	CoinbaseReward  = 100
-	TransactionFree = 2
+	Difficulty       = 2
+	TransactionCount = 1
+	CoinbaseReward   = 100
+	TransactionFree  = 2
 )

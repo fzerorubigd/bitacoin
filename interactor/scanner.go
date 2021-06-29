@@ -16,7 +16,7 @@ func Init() {
 		mutex: sync.Mutex{},
 	}
 	if len(config.Config.InitialNodes) < 1 {
-		log.Printf("This is the first node of the cryptocurrenct network!")
+		log.Printf("This is the first node of the decentralized network!")
 	} else {
 		Scan(config.Config.InitialNodes)
 	}
@@ -48,7 +48,7 @@ func Scan(initialNodes []string) {
 		scanResp := make(map[string][]string)
 		err := helper.SendReqAndUnmarshalResp(
 			http.MethodGet,
-			fmt.Sprintf("%s%s?port=%d", initialNodes[i], repository.ExploreUrl, config.Config.Port),
+			fmt.Sprintf("%s%s?port=%s", initialNodes[i], repository.ExploreUrl, config.Config.Port),
 			nil,
 			http.StatusOK,
 			&scanResp,

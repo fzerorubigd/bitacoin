@@ -6,6 +6,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/config"
 	"github.com/fzerorubigd/bitacoin/handlers"
+	"github.com/fzerorubigd/bitacoin/helper"
 	"github.com/fzerorubigd/bitacoin/interactor"
 	"github.com/fzerorubigd/bitacoin/repository"
 	"github.com/fzerorubigd/bitacoin/storege"
@@ -14,7 +15,7 @@ import (
 )
 
 func start(store storege.Store, args ...string) error {
-	_, err := blockchain.OpenBlockChain(difficulty, transactionCount, store)
+	_, err := blockchain.OpenBlockChain(repository.Difficulty, repository.TransactionCount, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}
@@ -29,10 +30,14 @@ func start(store storege.Store, args ...string) error {
 
 	err = config.ReadConfigFile(configFilePath)
 	if err != nil {
-		log.Fatalf("read config file err:%s\n", err.Error())
+		log.Fatalf("read config file err: %s\n", err.Error())
 	}
 
-	blockchain.LoadedBlockChain.MinerPubKey = []byte(config.Config.MinterPubKey)
+	minerPubKey, err := helper.ReadKeyFromPemFile(config.Config.PubKeyPath)
+	if err != nil {
+		log.Fatalf("read minerPubKey failed err: %s\n", err.Error())
+	}
+	blockchain.LoadedBlockChain.MinerPubKey = minerPubKey
 
 	interactor.Init()
 	host := fmt.Sprintf("%s:%s", config.Config.IP, config.Config.Port)

@@ -14,7 +14,7 @@ import (
 func DownloadBlockChainData(store storege.Store) {
 	nodes := interactor.Explorer.Nodes()
 	lastHash := getLastHashFromOtherNodes(nodes)
-	if lastHash == nil {
+	if len(lastHash) == 0 {
 		log.Fatalf("could not get last hash from other nodes, check your network connection")
 	}
 
@@ -101,7 +101,7 @@ func getLastHash(url string) ([]byte, error) {
 		return nil, fmt.Errorf("get lastHash err: %w", err.Error())
 	}
 
-	if respMap["lastHash"] == nil {
+	if len(respMap["lastHash"]) == 0 {
 		return nil, fmt.Errorf(`recived bad response from node %s, err: there is no lastBlock in response body,
 recieved response: %+v`, url, respMap)
 	}
