@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/helper"
@@ -10,8 +9,6 @@ import (
 	"log"
 	"net/http"
 )
-
-var memPool []*transaction.Transaction
 
 func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 	byteBody, err := ioutil.ReadAll(r.Body)
@@ -44,26 +41,9 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("new tnxRequest in memPool")
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
-		"message":    "tnxRequest appended to memPool successfully",
-		"tnxRequest": tnxRequest,
+		"message":     "transaction added to memPool successfully",
+		"transaction": txn,
 	})
 
-	memPool = append(memPool, txn)
-	if len(memPool) >= blockchain.LoadedBlockChain.TransactionCount && blockchain.LoadedBlockChain.CancelMining == nil {
-		ctx, cancel := context.WithCancel(context.Background())
-		blockchain.LoadedBlockChain.CancelMining = cancel
-
-		transactions := memPool[:blockchain.LoadedBlockChain.TransactionCount]
-		memPool = memPool[blockchain.LoadedBlockChain.TransactionCount:]
-		go func() {
-			newBlock, err := blockchain.LoadedBlockChain.StartMining(ctx, transactions...)
-			if err != nil {
-				log.Printf("StartMining err: %s\n", err.Error())
-			} else {
-				log.Printf("new block added to the blockchain successfully.\n%s\n", newBlock.String())
-			}
-			blockchain.LoadedBlockChain.CancelMining = nil
-		}()
-		memPool = nil
-	}
+	blockchain.LoadedBlockChain.AddToMemPool(txn)
 }

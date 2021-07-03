@@ -27,29 +27,48 @@ type BlockChain struct {
 	CancelMining     context.CancelFunc
 	MinerPubKey      []byte
 	Spent            map[string]struct{}
+	memPool          map[string]*transaction.Transaction
 	storege.Store
 }
 
+func (bc *BlockChain) AddToMemPool(txn *transaction.Transaction) {
+	txnID := hex.EncodeToString(txn.ID)
+	bc.memPool[txnID] = txn
+	if len(bc.memPool) >= bc.TransactionCount && bc.CancelMining == nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		bc.CancelMining = cancel
+		bc.memPool = make(map[string]*transaction.Transaction)
+		go func() {
+			newBlock, err := bc.StartMining(ctx)
+			if err != nil {
+				log.Printf("StartMining err: %s\n", err.Error())
+			} else {
+				log.Printf("new block added to the blockchain successfully.\n%s\n", newBlock.String())
+			}
+			bc.CancelMining = nil
+		}()
+	}
+}
+
 // StartMining a new data to the end of the block chain by creating a new block
-func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transaction.Transaction) (*block.Block, error) {
+func (bc *BlockChain) StartMining(ctx context.Context) (*block.Block, error) {
 	log.Println("mining new block has been started")
 	bc.Spent = make(map[string]struct{})
-	if len(transactions) == 0 {
-		return nil, fmt.Errorf("no transactions to add")
+
+	transactions := make([]*transaction.Transaction, len(bc.memPool)+1)
+	transactions[0] = transaction.NewRewardTxn(bc.MinerPubKey)
+	i := 1
+	for _, txn := range bc.memPool {
+		transactions[i] = txn
 	}
+	bc.memPool = make(map[string]*transaction.Transaction)
+
 	hash, err := bc.Store.LastHash()
 	if err != nil {
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
 
-	rewardTnx := transaction.NewRewardTxn(bc.MinerPubKey)
-	txnsPlusReward := make([]*transaction.Transaction, len(transactions)+1)
-	txnsPlusReward[0] = rewardTnx
-	for i, txn := range transactions {
-		txnsPlusReward[i+1] = txn
-	}
-
-	b := block.StartMining(ctx, txnsPlusReward, bc.Mask, hash)
+	b := block.StartMining(ctx, transactions, bc.Mask, hash)
 	log.Println("new block mined successfully")
 
 	err = interactor.Shout(b)
@@ -57,7 +76,7 @@ func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transact
 		return nil, err
 	}
 
-	if err := bc.Store.AppendBlock(b); err != nil {
+	if err = bc.Store.AppendBlock(b); err != nil {
 		return nil, fmt.Errorf("AppendBlock new block to store failed: %w", err)
 	}
 

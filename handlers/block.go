@@ -52,11 +52,6 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("block transactions are valid")
 
-	if blockchain.LoadedBlockChain.CancelMining != nil {
-		blockchain.LoadedBlockChain.CancelMining()
-		log.Println("mining canceled")
-	}
-
 	err = blockchain.LoadedBlockChain.AppendBlock(&newBlock)
 	if err != nil {
 		log.Printf("append new block, err: %s\n", err.Error())
@@ -64,6 +59,11 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 			"error": err.Error(),
 		})
 		return
+	}
+
+	if blockchain.LoadedBlockChain.CancelMining != nil {
+		blockchain.LoadedBlockChain.CancelMining()
+		log.Println("mining canceled")
 	}
 
 	log.Printf("new block Accepted:\n%s\n", newBlock.String())
