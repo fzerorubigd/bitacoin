@@ -235,36 +235,36 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 	return unspent, balance, nil
 }
 
-func (bc *BlockChain) NewTransaction(tnxRequest *transaction.TransactionRequest) (*transaction.Transaction, error) {
+func (bc *BlockChain) NewTransaction(txnRequest *transaction.TransactionRequest) (*transaction.Transaction, error) {
 	lastFourthBlocks := bc.LastFourthBlocks()
-	if len(lastFourthBlocks) == 4 && lastFourthBlocks[3] != nil && lastFourthBlocks[3].Time > tnxRequest.Time {
+	if len(lastFourthBlocks) == 4 && lastFourthBlocks[3] != nil && lastFourthBlocks[3].Time > txnRequest.Time {
 		return nil, fmt.Errorf("transaction is expired")
 	}
 
-	tnxID := transaction.CalculateTxnID(tnxRequest.Signature, tnxRequest.Time)
+	txnID := transaction.CalculateTxnID(txnRequest.Signature, txnRequest.Time)
 
 	for _, oldBlock := range lastFourthBlocks {
-		if oldBlock != nil && oldBlock.Contains(tnxID) {
+		if oldBlock != nil && oldBlock.Contains(txnID) {
 			return nil, fmt.Errorf("transaction already exist in the blockchain")
 		}
 	}
 
-	err := transaction.VerifySig(tnxRequest.Time, tnxRequest.FromPubKey,
-		tnxRequest.ToPubKey, tnxRequest.Amount, tnxRequest.Signature)
+	err := transaction.VerifySig(txnRequest.Time, txnRequest.FromPubKey,
+		txnRequest.ToPubKey, txnRequest.Amount, txnRequest.Signature)
 	if err != nil {
 		return nil, fmt.Errorf("vrify signiture err: %s", err.Error())
 	}
 
-	unspentTxns, balance, err := bc.UnspentTxn(tnxRequest.FromPubKey)
+	unspentTxns, balance, err := bc.UnspentTxn(txnRequest.FromPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("get unused txn failed: %w", err)
 	}
 
-	if tnxRequest.Amount <= 0 {
+	if txnRequest.Amount <= 0 {
 		return nil, fmt.Errorf("amount must be more than 0")
 	}
 
-	required := tnxRequest.Amount + repository.TransactionFree
+	required := txnRequest.Amount + repository.TransactionFree
 	if balance < required {
 		return nil, fmt.Errorf("not enough balance, want %d have %d", required, balance)
 	}
@@ -279,7 +279,7 @@ bigLoop:
 			inputCoins = append(inputCoins, &transaction.InputCoin{
 				TxnID:           txnId,
 				OutputCoinIndex: outputCoinIndex,
-				PubKey:          tnxRequest.FromPubKey,
+				PubKey:          txnRequest.FromPubKey,
 			})
 
 			if required <= 0 {
@@ -290,8 +290,8 @@ bigLoop:
 
 	OutputCoins := []*transaction.OutputCoin{
 		{
-			Amount: tnxRequest.Amount,
-			PubKey: tnxRequest.ToPubKey,
+			Amount: txnRequest.Amount,
+			PubKey: txnRequest.ToPubKey,
 		},
 		{
 			Amount: repository.TransactionFree,
@@ -302,14 +302,14 @@ bigLoop:
 	if required < 0 {
 		OutputCoins = append(OutputCoins, &transaction.OutputCoin{
 			Amount: -required,
-			PubKey: tnxRequest.FromPubKey,
+			PubKey: txnRequest.FromPubKey,
 		})
 	}
 
 	txn := &transaction.Transaction{
-		ID:          tnxID,
-		Time:        tnxRequest.Time,
-		Sig:         tnxRequest.Signature,
+		ID:          txnID,
+		Time:        txnRequest.Time,
+		Sig:         txnRequest.Signature,
 		InputCoins:  inputCoins,
 		OutputCoins: OutputCoins,
 	}

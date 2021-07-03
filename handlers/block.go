@@ -36,7 +36,7 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("recieved invalid block, err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid Block",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -46,7 +46,7 @@ func BlockHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("recieved valid block but with invalid transactions, err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid Transactions",
+			"error": err.Error(),
 		})
 		return
 	}

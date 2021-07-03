@@ -28,6 +28,7 @@ type explorer struct {
 }
 
 func (e *explorer) AddNewNode(nodeAddr string) {
+	log.Printf("new node has been discovered: %s\n", nodeAddr)
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	e.nodes[nodeAddr] = struct{}{}

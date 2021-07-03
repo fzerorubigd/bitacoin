@@ -20,26 +20,26 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tnxRequest := transaction.TransactionRequest{}
-	err = json.Unmarshal(byteBody, &tnxRequest)
+	txnRequest := transaction.TransactionRequest{}
+	err = json.Unmarshal(byteBody, &txnRequest)
 	if err != nil {
-		log.Printf("tnxRequest unmarshal err: %s\n", err.Error())
+		log.Printf("txnRequest unmarshal err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": "Bad Request",
 		})
 		return
 	}
 
-	txn, err := blockchain.LoadedBlockChain.NewTransaction(&tnxRequest)
+	txn, err := blockchain.LoadedBlockChain.NewTransaction(&txnRequest)
 	if err != nil {
-		log.Printf("new tnxRequest err: %s\n", err.Error())
+		log.Printf("new txnRequest err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	log.Println("new tnxRequest in memPool")
+	log.Println("new txnRequest in memPool")
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
 		"message":     "transaction added to memPool successfully",
 		"transaction": txn,

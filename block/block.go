@@ -41,9 +41,9 @@ func (b *Block) Validate(mask []byte) error {
 	return nil
 }
 
-func (b *Block) Contains(tnxID []byte) bool {
+func (b *Block) Contains(txnID []byte) bool {
 	for i := range b.Transactions {
-		if bytes.Equal(tnxID, b.Transactions[i].ID) {
+		if bytes.Equal(txnID, b.Transactions[i].ID) {
 			return true
 		}
 	}
