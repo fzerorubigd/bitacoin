@@ -14,6 +14,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/storege"
 	"github.com/fzerorubigd/bitacoin/transaction"
 	"log"
+	"strconv"
 )
 
 var LoadedBlockChain *BlockChain
@@ -25,13 +26,14 @@ type BlockChain struct {
 	TransactionCount int
 	CancelMining     context.CancelFunc
 	MinerPubKey      []byte
+	Spent            map[string]struct{}
 	storege.Store
 }
 
 // StartMining a new data to the end of the block chain by creating a new block
 func (bc *BlockChain) StartMining(ctx context.Context, transactions ...*transaction.Transaction) (*block.Block, error) {
 	log.Println("mining new block has been started")
-
+	bc.Spent = make(map[string]struct{})
 	if len(transactions) == 0 {
 		return nil, fmt.Errorf("no transactions to add")
 	}
@@ -181,12 +183,14 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 		for _, txn := range b.Transactions {
 			txnID := hex.EncodeToString(txn.ID)
 			for outputCoinIndex, OutputCoin := range txn.OutputCoins {
-				if OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent[txnID]) {
+				if _, ok := bc.Spent[txnID+strconv.Itoa(outputCoinIndex)]; !ok &&
+					OutputCoin.OwnedBy(pubKey) && !helper.InArray(outputCoinIndex, spent[txnID]) {
 					if _, ok := unspent[txnID]; !ok {
 						unspent[txnID] = make(map[int]*transaction.OutputCoin)
 					}
 					unspent[txnID][outputCoinIndex] = OutputCoin
 					balance += OutputCoin.Amount
+					bc.Spent[txnID+strconv.Itoa(outputCoinIndex)] = struct{}{}
 				}
 			}
 
