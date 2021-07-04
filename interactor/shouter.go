@@ -15,7 +15,7 @@ func Shout(block *block.Block) error {
 	acceptCount := 0
 	rejectCount := 0
 
-	for nodeAddr := range Explorer.nodes {
+	for nodeAddr := range Interactor.nodes {
 		shoutResp := make(map[string]string)
 		err := helper.SendReqAndUnmarshalResp(
 			http.MethodPost,

@@ -6,7 +6,6 @@ import (
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/config"
 	"github.com/fzerorubigd/bitacoin/handlers"
-	"github.com/fzerorubigd/bitacoin/helper"
 	"github.com/fzerorubigd/bitacoin/interactor"
 	"github.com/fzerorubigd/bitacoin/repository"
 	"github.com/fzerorubigd/bitacoin/storege"
@@ -15,15 +14,10 @@ import (
 )
 
 func start(store storege.Store, args ...string) error {
-	_, err := blockchain.OpenBlockChain(repository.Difficulty, repository.TransactionCount, store)
-	if err != nil {
-		return fmt.Errorf("open failed: %w", err)
-	}
-
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	var configFilePath string
 	fs.StringVar(&configFilePath, "config", "config.json", "config file path")
-	err = fs.Parse(args[1:])
+	err := fs.Parse(args[1:])
 	if err != nil {
 		return err
 	}
@@ -33,14 +27,12 @@ func start(store storege.Store, args ...string) error {
 		log.Fatalf("read config file err: %s\n", err.Error())
 	}
 
-	minerPubKey, err := helper.ReadKeyFromPemFile(config.Config.PubKeyPath)
+	err = blockchain.OpenBlockChain(repository.Difficulty, repository.TransactionCount, store)
 	if err != nil {
-		log.Fatalf("read minerPubKey failed err: %s\n", err.Error())
+		return fmt.Errorf("open failed: %w", err)
 	}
-	blockchain.LoadedBlockChain.MinerPubKey = minerPubKey
 
 	interactor.Init()
-	host := fmt.Sprintf("%s:%s", config.Config.IP, config.Config.Port)
 
 	http.HandleFunc(repository.TransactionUrl, handlers.TransactionHandler)
 	http.HandleFunc(repository.ExploreUrl, handlers.ExploreHandler)
@@ -50,10 +42,10 @@ func start(store storege.Store, args ...string) error {
 	fileServer := http.FileServer(http.Dir(store.DataPath()))
 	http.Handle(repository.DataServeUrl, http.StripPrefix(repository.DataServeUrl, fileServer))
 
-	fmt.Printf("node started on host: %s\n", host)
-	return http.ListenAndServe(host, nil)
+	fmt.Printf("node started on host: %s\n", config.Config.Host)
+	return http.ListenAndServe(config.Config.Host, nil)
 }
 
 func init() {
-	addCommand("start", "start the decentralized block chain", start)
+	addCommand("start", "start the decentralized blockchain", start)
 }

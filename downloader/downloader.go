@@ -12,7 +12,7 @@ import (
 )
 
 func DownloadBlockChainData(store storege.Store) {
-	nodes := interactor.Explorer.Nodes()
+	nodes := interactor.Interactor.Nodes()
 	lastHash := getLastHashFromOtherNodes(nodes)
 	if len(lastHash) == 0 {
 		log.Fatalf("could not get last hash from other nodes, check your network connection")
@@ -28,7 +28,7 @@ func DownloadBlockChainData(store storege.Store) {
 Finished:
 	for {
 		if len(nodes) <= 0 {
-			log.Printf("there is not any node for download the block chain")
+			log.Printf("there is not any node for download the blockchain")
 			break Finished
 		}
 
@@ -36,7 +36,7 @@ Finished:
 			for i := 0; i < 4; i++ {
 				newBlock, err := downloadBlock(fmt.Sprintf("%s%s%s", nodeUrl, repository.DataServeUrl, blockFileName))
 				if err != nil {
-					log.Printf("got an error while downloading the block chain, err: %s\n", err.Error())
+					log.Printf("got an error while downloading the blockchain, err: %s\n", err.Error())
 					delete(nodes, nodeUrl)
 					break
 				}
@@ -51,7 +51,7 @@ Finished:
 				if len(newBlock.PrevHash) > 0 {
 					blockFileName = fmt.Sprintf("%x", newBlock.PrevHash) + ".json"
 				} else {
-					log.Println("block chain downloaded successfully")
+					log.Println("blockchain downloaded successfully")
 					break Finished
 				}
 			}

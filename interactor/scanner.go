@@ -7,11 +7,12 @@ import (
 	"github.com/fzerorubigd/bitacoin/repository"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 )
 
 func Init() {
-	Explorer = &explorer{
+	Interactor = &interactor{
 		nodes: make(map[string]struct{}),
 		mutex: sync.Mutex{},
 	}
@@ -22,23 +23,27 @@ func Init() {
 	}
 }
 
-type explorer struct {
+type interactor struct {
 	nodes map[string]struct{}
 	mutex sync.Mutex
 }
 
-func (e *explorer) AddNewNode(nodeAddr string) {
-	log.Printf("new node has been discovered: %s\n", nodeAddr)
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	e.nodes[nodeAddr] = struct{}{}
+func (e *interactor) AddNewNode(nodeAddr string) {
+	_, ok := e.nodes[nodeAddr]
+	if !ok && "http://"+config.Config.Host != nodeAddr {
+		log.Printf("new node has been discovered: %s\n", nodeAddr)
+		e.mutex.Lock()
+		defer e.mutex.Unlock()
+		e.nodes[nodeAddr] = struct{}{}
+	}
+
 }
 
-func (e *explorer) Nodes() map[string]struct{} {
+func (e *interactor) Nodes() map[string]struct{} {
 	return e.nodes
 }
 
-var Explorer = &explorer{}
+var Interactor = &interactor{}
 
 func Scan(initialNodes []string) {
 	for i := range initialNodes {
@@ -49,7 +54,12 @@ func Scan(initialNodes []string) {
 		scanResp := make(map[string][]string)
 		err := helper.SendReqAndUnmarshalResp(
 			http.MethodGet,
-			fmt.Sprintf("%s%s?port=%s", initialNodes[i], repository.ExploreUrl, config.Config.Port),
+			fmt.Sprintf(
+				"%s%s?port=%s",
+				initialNodes[i],
+				repository.ExploreUrl,
+				strings.Split(config.Config.Host, ":")[1],
+			),
 			nil,
 			http.StatusOK,
 			&scanResp,
@@ -60,13 +70,13 @@ func Scan(initialNodes []string) {
 			continue
 		}
 
-		Explorer.AddNewNode(initialNodes[i])
+		Interactor.AddNewNode(initialNodes[i])
 		for i := range scanResp["nodes"] {
-			Explorer.AddNewNode(scanResp["nodes"][i])
+			Interactor.AddNewNode(scanResp["nodes"][i])
 		}
 	}
 
-	if len(Explorer.nodes) < 1 {
+	if len(Interactor.nodes) < 1 {
 		log.Fatalf("could not connect to any other nodes, check your config file and your network connection")
 	}
 }

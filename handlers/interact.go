@@ -10,7 +10,7 @@ import (
 
 func ExploreHandler(w http.ResponseWriter, r *http.Request) {
 	response := make(map[string][]string)
-	response["nodes"] = helper.ExtractKeysFromMap(interactor.Explorer.Nodes())
+	response["nodes"] = helper.ExtractKeysFromMap(interactor.Interactor.Nodes())
 
 	port := r.URL.Query().Get("port")
 	if port == "" {
@@ -23,5 +23,5 @@ func ExploreHandler(w http.ResponseWriter, r *http.Request) {
 	helper.WriteResponse(w, http.StatusOK, response)
 
 	ip := strings.Split(r.RemoteAddr, ":")[0]
-	interactor.Explorer.AddNewNode(fmt.Sprintf("http://%s:%s", ip, port))
+	interactor.Interactor.AddNewNode(fmt.Sprintf("http://%s:%s", ip, port))
 }

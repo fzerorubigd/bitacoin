@@ -30,5 +30,5 @@ func download(store storege.Store, args ...string) error {
 }
 
 func init() {
-	addCommand("download", "download block chain from other nodes", download)
+	addCommand("download", "download blockchain from other nodes", download)
 }

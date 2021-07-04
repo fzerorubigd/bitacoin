@@ -30,11 +30,19 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txn, err := blockchain.LoadedBlockChain.NewTransaction(&txnRequest)
+	txn, err := blockchain.LoadedBlockChain.NewTxn(&txnRequest)
 	if err != nil {
 		log.Printf("new txnRequest err: %s\n", err.Error())
 		helper.WriteResponse(w, http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
+		})
+		return
+	}
+
+	err = blockchain.LoadedBlockChain.AddToMemPool(txn)
+	if err != nil {
+		helper.WriteResponse(w, http.StatusConflict, map[string]string{
+			"message": err.Error(),
 		})
 		return
 	}
@@ -44,6 +52,4 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		"message":     "transaction added to memPool successfully",
 		"transaction": txn,
 	})
-
-	blockchain.LoadedBlockChain.AddToMemPool(txn)
 }

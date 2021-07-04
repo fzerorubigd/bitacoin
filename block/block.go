@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Block is the core data for the block chain. it can contain anything,
+// Block is the core data for the blockchain. it can contain anything,
 // a block is like a record in a table in database
 type Block struct {
 	Time         int64
@@ -51,16 +51,21 @@ func (b *Block) Contains(txnID []byte) bool {
 	return false
 }
 
-// StartMining creates a new block in the system, it needs difficulty mask for
+// Mine creates a new block in the system, it needs difficulty mask for
 // create a good hash, and also the previous block hash
-func StartMining(ctx context.Context, txns []*transaction.Transaction, mask, prevHash []byte) *Block {
+func Mine(ctx context.Context, txns []*transaction.Transaction, mask, prevHash []byte) *Block {
 	b := Block{
 		Time:         time.Now().UnixNano(),
 		Transactions: txns,
 		PrevHash:     prevHash,
 	}
-	b.Hash, b.Nonce = hasher.DifficultHash(ctx, mask, b.Time,
-		transaction.CalculateTxnsHash(b.Transactions...), b.PrevHash)
+	b.Hash, b.Nonce = hasher.DifficultHash(
+		ctx,
+		mask,
+		b.Time,
+		transaction.CalculateTxnsHash(b.Transactions...),
+		b.PrevHash,
+	)
 
 	if len(b.Hash) == 0 {
 		return nil

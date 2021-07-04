@@ -7,8 +7,7 @@ import (
 var Config BlockChainConfig
 
 type BlockChainConfig struct {
-	IP           string
-	Port         string
+	Host         string
 	InitialNodes []string
 	PubKeyPath   string
 }

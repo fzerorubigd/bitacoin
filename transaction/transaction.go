@@ -18,8 +18,8 @@ type TransactionRequest struct {
 
 type Transaction struct {
 	Time        int64
-	ID          []byte
 	Sig         []byte
+	ID          []byte
 	InputCoins  []*InputCoin
 	OutputCoins []*OutputCoin
 }
@@ -39,7 +39,8 @@ func (txn *Transaction) IsCoinBase() bool {
 	return len(txn.OutputCoins) == 1 &&
 		len(txn.InputCoins) == 1 &&
 		txn.InputCoins[0].OutputCoinIndex == -1 &&
-		len(txn.InputCoins[0].TxnID) == 0
+		len(txn.InputCoins[0].TxnID) == 0 &&
+		bytes.Equal(txn.Sig, repository.Sig)
 }
 
 func (txo *OutputCoin) OwnedBy(key []byte) bool {
@@ -67,7 +68,10 @@ func NewRewardTxn(toPubKey []byte) *Transaction {
 		InputCoins:  []*InputCoin{&txi},
 		OutputCoins: []*OutputCoin{&txo},
 	}
-	txn.ID = CalculateTxnID(nil, t)
+
+	txn.Sig = repository.Sig
+	txn.ID = CalculateTxnID(txn.Sig, txn.Time)
+
 	return txn
 }
 
