@@ -11,16 +11,25 @@ import (
 	"sync"
 )
 
-func Init() {
+var Interactor = &interactor{}
+
+func Init() error {
 	Interactor = &interactor{
 		nodes: make(map[string]struct{}),
 		mutex: sync.Mutex{},
 	}
 	if len(config.Config.InitialNodes) < 1 {
-		log.Printf("This is the first node of the decentralized network!")
+		log.Println("This is the first node of the decentralized network!")
+		return nil
 	} else {
 		Scan(config.Config.InitialNodes)
 	}
+
+	if len(Interactor.Nodes()) < 1 {
+		return fmt.Errorf("could not found and node")
+	}
+
+	return nil
 }
 
 type interactor struct {
@@ -42,8 +51,6 @@ func (e *interactor) AddNewNode(nodeAddr string) {
 func (e *interactor) Nodes() map[string]struct{} {
 	return e.nodes
 }
-
-var Interactor = &interactor{}
 
 func Scan(initialNodes []string) {
 	for i := range initialNodes {

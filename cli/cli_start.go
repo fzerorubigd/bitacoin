@@ -11,6 +11,7 @@ import (
 	"github.com/fzerorubigd/bitacoin/storege"
 	"log"
 	"net/http"
+	"time"
 )
 
 func start(store storege.Store, args ...string) error {
@@ -32,8 +33,6 @@ func start(store storege.Store, args ...string) error {
 		return fmt.Errorf("open failed: %w", err)
 	}
 
-	interactor.Init()
-
 	http.HandleFunc(repository.TransactionUrl, handlers.TransactionHandler)
 	http.HandleFunc(repository.ExploreUrl, handlers.ExploreHandler)
 	http.HandleFunc(repository.BlockUrl, handlers.BlockHandler)
@@ -42,8 +41,17 @@ func start(store storege.Store, args ...string) error {
 	fileServer := http.FileServer(http.Dir(store.DataPath()))
 	http.Handle(repository.DataServeUrl, http.StripPrefix(repository.DataServeUrl, fileServer))
 
-	fmt.Printf("node started on host: %s\n", config.Config.Host)
-	return http.ListenAndServe(config.Config.Host, nil)
+	go func() {
+		fmt.Printf("node started on host: %s\n", config.Config.Host)
+		err := http.ListenAndServe(config.Config.Host, nil)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+	}()
+
+	<-time.After(time.Second)
+
+	return interactor.Init()
 }
 
 func init() {
