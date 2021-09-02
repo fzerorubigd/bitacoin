@@ -3,20 +3,37 @@ package main
 import (
 	"flag"
 	"github.com/fzerorubigd/bitacoin"
+	"github.com/gorilla/mux"
 	"log"
+	"net/http"
 	"os"
-)
-
-const (
-	difficulty = 20
 )
 
 func main() {
 
-	flag.Usage = usage
-	flag.Parse()
+	r := mux.NewRouter()
 
-	runBoltDB()
+	r.HandleFunc("/hash/{hash}", bitacoin.HashDetail)
+	r.HandleFunc("/", bitacoin.Index)
+	r.HandleFunc("/transfer", bitacoin.Transfer)
+	r.HandleFunc("/balance/{owner}", bitacoin.Balance)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("template/static"))))
+
+	http.Handle("/", r)
+
+	err := http.ListenAndServe(":9000", nil)
+	if err != nil {
+		return
+	}
+
+	//flag.Usage = usage
+	//flag.Parse()
+
+	//Run file base
+	//runByFile()
+
+	//Run db format
+	//runBoltDB()
 }
 
 func runByFile() {
