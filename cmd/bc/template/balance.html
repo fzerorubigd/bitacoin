@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include "header.html" %}
+<body>
+
+<div >
+    {% include "navbar.html" %}
+
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold text-gray-900">
+                Details of hash
+            </h1>
+        </div>
+    </header>
+    <main>
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+
+            <div class="bg-purple-600 bg-opacity-100 rounded-lg text-white text-center text-3xl p-10">
+                  Balance of {{name}} is {{ acc }} $
+            </div>
+            <div class="px-4 py-6 sm:px-0">
+                {% for i,t in transaction %}
+                <br><br>
+                Transaction ID
+                {{ t.ID |stringformat:"%x" }}
+                <div class="flex flex-col">
+                    <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                        <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+                            <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+
+                                    <tr>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        </th>
+                                    </tr>
+
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for o in t.VOut %}
+                                    <tr class=" bg-green-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            Value
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            {{ o.Value |stringformat:"%d" }} $
+                                        </td>
+                                    </tr>
+                                    <tr class=" bg-green-100">
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            Public Key
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="/balance/{{ o.PubKey |stringformat:" %s"}}">
+                                            {{ o.PubKey |stringformat:"%s" }}
+                                            </a>
+                                        </td>
+                                    </tr>
+
+                                    {% endfor %}
+
+                                    {% for o in t.VIn %}
+                                    <tr class="bg-indigo-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            Transaction ID
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            {{ o.TXID |stringformat:"%x" }}
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-indigo-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            Index of transaction out:
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            {{ o.VOut |stringformat:"%d" }}
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-indigo-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            Signiture
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            {{ o.Sig |stringformat:"%x" }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

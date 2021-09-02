@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+const (
+	Difficulty = 20
+)
+
 // BlockChain is the group of a block, with difficulty level
 type BlockChain struct {
 	Difficulty int
@@ -23,7 +27,7 @@ func (bc *BlockChain) Add(data ...*Transaction) (*Block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Getting the last block failed: %w", err)
 	}
-	b := NewBlock(data, bc.Mask, hash)
+	b := NewBlock(data, bc.Difficulty, hash)
 	if err := bc.store.Append(b); err != nil {
 		return nil, fmt.Errorf("Append new block to store failed: %w", err)
 	}
@@ -57,10 +61,24 @@ func (bc *BlockChain) Print(header bool, count int) error {
 	return err
 }
 
+// AllBlocks get list of all block
+func (bc *BlockChain) AllBlocks() []*Block {
+	var blocks []*Block
+	err := Iterate(bc.store, func(b *Block) error {
+		blocks = append(blocks, b)
+		return nil
+	})
+
+	if err != nil {
+
+	}
+	return blocks
+}
+
 // Validate all data in the block chain
 func (bc *BlockChain) Validate() error {
 	return Iterate(bc.store, func(b *Block) error {
-		if err := b.Validate(bc.Mask); err != nil {
+		if err := b.Validate(bc.Difficulty); err != nil {
 			return fmt.Errorf("block chain is not valid: %w", err)
 		}
 
@@ -124,7 +142,7 @@ func NewBlockChain(genesis []byte, difficulty int, store Store) (*BlockChain, er
 		return nil, fmt.Errorf("store already initialized")
 	}
 	gbTxn := NewCoinBaseTxn(genesis, nil)
-	gb := NewBlock([]*Transaction{gbTxn}, bc.Mask, []byte{})
+	gb := NewBlock([]*Transaction{gbTxn}, bc.Difficulty, []byte{})
 	if err := store.Append(gb); err != nil {
 		return nil, fmt.Errorf("Add Genesis block to store failed: %w", err)
 	}

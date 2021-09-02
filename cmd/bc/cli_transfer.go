@@ -19,7 +19,7 @@ func transfer(store bitacoin.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	bc, err := bitacoin.OpenBlockChain(difficulty, store)
+	bc, err := bitacoin.OpenBlockChain(bitacoin.Difficulty, store)
 	if err != nil {
 		return fmt.Errorf("open failed: %w", err)
 	}

@@ -16,7 +16,7 @@ func initialize(store bitacoin.Store, args ...string) error {
 
 	fs.Parse(args[1:])
 
-	_, err := bitacoin.NewBlockChain([]byte(genesis), difficulty, store)
+	_, err := bitacoin.NewBlockChain([]byte(genesis), bitacoin.Difficulty, store)
 	if err != nil {
 		return fmt.Errorf("create failed: %w", err)
 	}
