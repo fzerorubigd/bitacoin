@@ -50,7 +50,11 @@ func (bc *BlockChain) MineNewBlock() (*block.Block, error) {
 	log.Println("mining new block has been started")
 	ctx, cancel := context.WithCancel(context.Background())
 	bc.CancelMining = cancel
-	bc.miningPool = bc.stackPool
+
+	for txnID, txn := range bc.stackPool {
+		bc.miningPool[txnID] = txn
+	}
+
 	bc.stackPool = make(map[string]*transaction.Transaction)
 	bc.spent = make(map[string]struct{})
 

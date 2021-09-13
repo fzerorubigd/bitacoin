@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/fzerorubigd/bitacoin/blockchain"
 	"github.com/fzerorubigd/bitacoin/helper"
@@ -47,7 +48,9 @@ func TransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("new txnRequest in memPool")
+	var prettyJSON bytes.Buffer
+	_ = json.Indent(&prettyJSON, byteBody, "", "  ")
+	log.Printf("new txnRequest in memPool:\n%s\n", prettyJSON.String())
 	helper.WriteResponse(w, http.StatusOK, map[string]interface{}{
 		"message":     "transaction added to memPool successfully",
 		"transaction": txn,

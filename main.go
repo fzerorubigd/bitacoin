@@ -6,7 +6,6 @@ import (
 	"github.com/fzerorubigd/bitacoin/storege"
 	"log"
 	"os"
-	"os/signal"
 )
 
 func main() {
@@ -26,8 +25,4 @@ func main() {
 	if err := cli.Dispatch(s, flag.Args()...); err != nil {
 		log.Fatal(err.Error())
 	}
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	<-sig
 }

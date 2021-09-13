@@ -11,6 +11,8 @@ import (
 	"github.com/fzerorubigd/bitacoin/storege"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -51,7 +53,16 @@ func start(store storege.Store, args ...string) error {
 
 	<-time.After(time.Second)
 
-	return interactor.Init()
+	err = interactor.Init()
+	if err != nil {
+		log.Printf("intract err: %s\n", err.Error())
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	<-sig
+
+	return nil
 }
 
 func init() {

@@ -58,7 +58,8 @@ func (bc *BlockChain) UnspentTxn(pubKey []byte) (map[string]map[int]*transaction
 			txnID := hex.EncodeToString(txn.ID)
 			for outputCoinIndex, OutputCoin := range txn.OutputCoins {
 				_, spentInOtherBlockTxns := bc.spent[txnID+strconv.Itoa(outputCoinIndex)]
-				if _, ok := spent[txnID+strconv.Itoa(outputCoinIndex)]; !spentInOtherBlockTxns && !ok && OutputCoin.OwnedBy(pubKey) {
+				if _, ok := spent[txnID+strconv.Itoa(outputCoinIndex)]; !spentInOtherBlockTxns &&
+					!ok && OutputCoin.OwnedBy(pubKey) {
 					if _, ok = unspent[txnID]; !ok {
 						unspent[txnID] = make(map[int]*transaction.OutputCoin)
 					}

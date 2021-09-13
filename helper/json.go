@@ -23,7 +23,6 @@ func ReadJSON(path string, v interface{}) error {
 }
 
 func WriteJSON(path string, v interface{}) error {
-	// TODO : fail if file exists
 	fl, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file failed: %w", err)
